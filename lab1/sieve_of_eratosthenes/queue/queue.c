@@ -1,153 +1,79 @@
-#include <stdio.h>
+#include "queue.h"
+#include <pthread.h>
 #include <stdlib.h>
 
-#include "queue.h"
-
 struct queue {
-    int *collection;
-    size_t capacity;
-    size_t max_size;
-    size_t total_enqueue;
-    size_t total_dequeue;
+    int* data;
+    int size;
+    int front;
+    int rear;
+    int count;
+    int terminated;
+    pthread_mutex_t mutex;
+    pthread_cond_t not_empty;
+    pthread_cond_t not_full;
 };
 
-/* Initializes the queue with a specified capacity.
-
-   capacity: The initial size to allocate for the queue.
-
-   Returns: A pointer to the newly created queue or NULL if an error occurs.
-*/
-struct queue *queue_init(size_t capacity) {
-    if (capacity <= 0) return NULL;
-
-    struct queue *q = malloc(sizeof(struct queue));
-    if (q == NULL) return NULL;
-
-    q->collection = malloc(sizeof(int) * capacity);
-    if (q->collection == NULL) {
-        free(q);
-        return NULL;
-    }
-
-    q->capacity = capacity;
-    q->max_size = 0;
-    q->total_dequeue = 0;
-    q->total_enqueue = 0;
-
+struct queue* queue_init(int size) {
+    struct queue* q = malloc(sizeof(struct queue));
+    q->data = malloc(sizeof(int) * size);
+    q->size = size;
+    q->front = 0;
+    q->rear = 0;
+    q->count = 0;
+    q->terminated = 0;
+    pthread_mutex_init(&q->mutex, NULL);
+    pthread_cond_init(&q->not_empty, NULL);
+    pthread_cond_init(&q->not_full, NULL);
     return q;
 }
 
-/* Cleans up the queue and releases allocated memory.
-
-   q: A pointer to the queue that is being destroyed.
-*/
-void queue_cleanup(struct queue *q) {
-    if (q == NULL) {
-        return;
+int queue_push(struct queue* q, int value) {
+    pthread_mutex_lock(&q->mutex);
+    while (q->count == q->size && !q->terminated) {
+        pthread_cond_wait(&q->not_full, &q->mutex);
     }
-    free(q->collection);
+    if (q->terminated) {
+        pthread_mutex_unlock(&q->mutex);
+        return -1;
+    }
+    q->data[q->rear] = value;
+    q->rear = (q->rear + 1) % q->size;
+    q->count++;
+    pthread_cond_signal(&q->not_empty);
+    pthread_mutex_unlock(&q->mutex);
+    return 0;
+}
+
+int queue_pop(struct queue* q, int* value) {
+    pthread_mutex_lock(&q->mutex);
+    while (q->count == 0 && !q->terminated) {
+        pthread_cond_wait(&q->not_empty, &q->mutex);
+    }
+    if (q->terminated && q->count == 0) {
+        pthread_mutex_unlock(&q->mutex);
+        return -1;
+    }
+    *value = q->data[q->front];
+    q->front = (q->front + 1) % q->size;
+    q->count--;
+    pthread_cond_signal(&q->not_full);
+    pthread_mutex_unlock(&q->mutex);
+    return 0;
+}
+
+void queue_terminate(struct queue* q) {
+    pthread_mutex_lock(&q->mutex);
+    q->terminated = 1;
+    pthread_cond_broadcast(&q->not_empty);
+    pthread_cond_broadcast(&q->not_full);
+    pthread_mutex_unlock(&q->mutex);
+}
+
+void queue_cleanup(struct queue* q) {
+    free(q->data);
+    pthread_mutex_destroy(&q->mutex);
+    pthread_cond_destroy(&q->not_empty);
+    pthread_cond_destroy(&q->not_full);
     free(q);
-}
-
-/* Displays current statistics of the queue, such as push and pop counts and
-    maximum elements seen.
-
-   q: A pointer to the queue whose stats are to be printed.
-*/
-void queue_stats(const struct queue *q) {
-    if (q == NULL) {
-        return;
-    }
-    fprintf(stderr, "stats %zu %zu %zu\n",
-            q->total_enqueue, q->total_dequeue, q->max_size);
-}
-
-/* Adds an element to the back of the queue.
-
-   q: A pointer to the queue.
-   e: The element to be added to the queue.
-
-   Returns: 0 if the operation is successful, or 1 if the queue is full.
-*/
-int queue_push(struct queue *q, int e) {
-    if (q == NULL) {
-        perror("Pointer points to nothing.");
-        return 1;
-    } else if (!(q->capacity == queue_size(q))) {
-        q->collection[q->total_enqueue++ % q->capacity] = e;
-        if (queue_size(q) > q->max_size) {
-            q->max_size = queue_size(q);
-        }
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
-/* Removes and returns the element from the front of the queue.
-
-   q: A pointer to the queue.
-
-   Returns: The element at the front of the queue or -1 if the queue is empty.
-*/
-int queue_pop(struct queue *q) {
-    if (q == NULL) {
-        perror("Pointer points to nothing");
-        return -1;
-    } else if (queue_size(q) > 0) {
-        int dequeued = q->collection[q->total_dequeue++ % q->capacity];
-        return dequeued;
-    } else {
-        return -1;
-    }
-}
-
-/* Retrieves, but does not remove, the head of this queue.
-
-   q: A pointer to the queue.
-
-   Returns: The head of the queue or -1 if the queue is empty.
-*/
-int queue_peek(const struct queue *q) {
-    if (q == NULL) {
-        perror("Pointer points to nothing");
-        return -1;
-    } else if (queue_size(q) > 0){
-        return q->collection[q->total_dequeue % q->capacity];
-    } else {
-        return -1;
-    }
-}
-
-/* Checks if the queue is empty.
-
-   q: A pointer to the queue.
-
-   Returns: 1 if the queue is empty, 0 if it is not, or -1 if
-   the pointer is NULL.
-*/
-int queue_empty(const struct queue *q) {
-    if (q == NULL) {
-        perror("Pointer points to nothing");
-        return -1;
-    } else if (queue_size(q) > 0) {
-        return 0;
-    } else if (queue_size(q) <= 0) {
-        return 1;
-    } else {
-        return -1;
-    }
-}
-
-/* Returns the number of elements in the queue.
-
-   q: A pointer to the queue.
-
-   Returns: The current size of the queue.
-*/
-size_t queue_size(const struct queue *q) {
-    if (q == NULL) {
-        return 0;
-    }
-    return (q->total_enqueue - q->total_dequeue);
 }

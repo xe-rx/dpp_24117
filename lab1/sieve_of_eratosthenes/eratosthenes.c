@@ -1,101 +1,87 @@
-#define _POSIX_SOURCE 200122L
-#define _XOPEN_SOURCE 600
-
 #include <stdio.h>
-#include "queue/queue.h"
-#include <limits.h>
-#include <pthread.h>
 #include <stdlib.h>
-#define BUFFERSIZE (size_t)80
+#include <pthread.h>
+#include "queue/queue.h"
 
-int num_threads = 0;
-int flag = 0;
+#define QUEUE_SIZE 100
+#define MAX_PRIMES 5000
 
-pthread_barrier_t barrier;
-pthread_mutex_t mutex_primes;
-pthread_mutex_t mutex_queue;
+volatile int primes_printed = 0;
+volatile int done = 0;
+pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-void *filter_thread(void *arg) {
-    struct queue *input_queue = (struct queue *)arg;
-    struct queue *output_queue = queue_init(BUFFERSIZE);
-    int prime;
-
-    while (1){
-        if (queue_empty(input_queue) == 1) {
-            continue;
-        }
-        pthread_mutex_lock(&mutex_primes);
-        prime = queue_pop(input_queue);
-        pthread_mutex_unlock(&mutex_primes);
-
-        printf("%d", prime);
-        break;
-    }
-
-    pthread_t filter;
-    pthread_create(&filter, NULL, filter_thread, output_queue);
-    num_threads++;
-    pthread_mutex_init(&mutex_queue, NULL);
+void* generator_thread(void* arg) {
+    struct queue* q = (struct queue*)arg;
+    int num = 2;
     while (1) {
-    pthread_mutex_lock(&mutex_queue);
-    if (queue_empty(input_queue) == 1) {
-        pthread_mutex_unlock(&mutex_queue);
-        continue;
-    }
-    int popped = queue_pop(input_queue);
-    pthread_mutex_unlock(&mutex_queue);
-
-    if ((popped % prime) != 0) {
-        queue_push(output_queue, popped);
-    }
-    if (flag == 1) {
-        break;
-    }
-}
-
-
-    queue_cleanup(output_queue);
-    return NULL;
-}
-
-void *generator_thread(void *arg) {
-    struct queue *output_queue = (struct queue *)arg;
-    int number = 2;
-    num_threads++;
-
-    pthread_t filter;
-    pthread_create(&filter, NULL, filter_thread, output_queue);
-
-    while (1) {
-        if (queue_push(output_queue, number++) == 1) {
-            number--;
-        }
-        if (flag == 1) {
+        if (done) {
+            queue_terminate(q);
             break;
         }
+        if (queue_push(q, num) == -1) {
+            break;
+        }
+        num++;
     }
-
-    queue_cleanup(output_queue);
     return NULL;
 }
 
-int main (void){
-    struct queue *generator_queue = queue_init(BUFFERSIZE);
-    if (generator_queue == NULL) {
-        exit(0);
+void* filter_thread(void* arg) {
+    struct queue* input_q = (struct queue*)arg;
+    int prime;
+
+    if (queue_pop(input_q, &prime) == -1) {
+        return NULL;
     }
 
-    pthread_mutex_init(&mutex_primes, NULL);
+    pthread_mutex_lock(&count_mutex);
+    if (primes_printed < MAX_PRIMES) {
+        primes_printed++;
+        printf("%d\n", prime);
+        pthread_mutex_unlock(&count_mutex);
+    } else {
+        done = 1;
+        pthread_mutex_unlock(&count_mutex);
+        queue_terminate(input_q);
+        return NULL;
+    }
 
+    struct queue* output_q = queue_init(QUEUE_SIZE);
+    pthread_t next_filter_thread;
+    pthread_create(&next_filter_thread, NULL, filter_thread, output_q);
+
+    int num;
+    while (1) {
+        if (queue_pop(input_q, &num) == -1) {
+            break;
+        }
+        if (done) {
+            queue_terminate(output_q);
+            break;
+        }
+        if (num % prime != 0) {
+            if (queue_push(output_q, num) == -1) {
+                break;
+            }
+        }
+    }
+
+    pthread_join(next_filter_thread, NULL);
+    queue_cleanup(output_q);
+    return NULL;
+}
+
+int main() {
+    struct queue* q = queue_init(QUEUE_SIZE);
     pthread_t generator;
-    pthread_create(&generator, NULL, generator_thread, generator_queue);
-    num_threads++;
+    pthread_t first_filter;
 
-    if (num_threads >= 5000) {
-        flag = 1;
-    }
+    pthread_create(&generator, NULL, generator_thread, q);
+    pthread_create(&first_filter, NULL, filter_thread, q);
 
-    free(generator_queue);
-    pthread_barrier_destroy(&barrier);
-    pthread_mutex_destroy(&mutex_primes);
+    pthread_join(generator, NULL);
+    pthread_join(first_filter, NULL);
+
+    queue_cleanup(q);
+    return 0;
 }
