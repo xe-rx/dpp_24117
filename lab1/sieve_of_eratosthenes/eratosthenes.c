@@ -13,6 +13,7 @@ int flag = 0;
 
 pthread_barrier_t barrier;
 pthread_mutex_t mutex_primes;
+pthread_mutex_t mutex_queue;
 
 void *filter_thread(void *arg) {
     struct queue *input_queue = (struct queue *)arg;
@@ -34,23 +35,26 @@ void *filter_thread(void *arg) {
     pthread_t filter;
     pthread_create(&filter, NULL, filter_thread, output_queue);
     num_threads++;
-
-    while(1) {
-        if (queue_empty(input_queue) == 1) {
-            continue;
-        }
-        int popped = queue_pop(input_queue);
-        if ((popped % prime) == 1) {
-            queue_push(output_queue, popped);
-        }
-        if (flag == 1) {
-            break;
-        }
+    pthread_mutex_init(&mutex_queue, NULL);
+    while (1) {
+    pthread_mutex_lock(&mutex_queue);
+    if (queue_empty(input_queue) == 1) {
+        pthread_mutex_unlock(&mutex_queue);
+        continue;
     }
+    int popped = queue_pop(input_queue);
+    pthread_mutex_unlock(&mutex_queue);
 
-    pthread_barrier_wait(&barrier);
+    if ((popped % prime) != 0) {
+        queue_push(output_queue, popped);
+    }
+    if (flag == 1) {
+        break;
+    }
+}
+
+
     queue_cleanup(output_queue);
-    pthread_barrier_wait(&barrier);
     return NULL;
 }
 
@@ -70,9 +74,8 @@ void *generator_thread(void *arg) {
             break;
         }
     }
-    pthread_barrier_wait(&barrier);
+
     queue_cleanup(output_queue);
-    pthread_barrier_wait(&barrier);
     return NULL;
 }
 
@@ -90,7 +93,6 @@ int main (void){
 
     if (num_threads >= 5000) {
         flag = 1;
-        pthread_barrier_init(&barrier, NULL, num_threads);
     }
 
     free(generator_queue);
