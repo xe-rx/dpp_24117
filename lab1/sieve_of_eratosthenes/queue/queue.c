@@ -1,6 +1,9 @@
 #include "queue.h"
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
+
+int terminated_queues = 0;
 
 struct queue {
     int* data;
@@ -67,6 +70,7 @@ void queue_terminate(struct queue* q) {
     q->terminated = 1;
     pthread_cond_broadcast(&q->not_empty);
     pthread_cond_broadcast(&q->not_full);
+    terminated_queues++;
     pthread_mutex_unlock(&q->mutex);
 }
 
