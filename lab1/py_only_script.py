@@ -9,7 +9,7 @@ imax = 100000
 tmax = 100000
 
 # Define the range of thread counts you want to test
-thread_counts = [1, 2, 4, 6, 8, 10, 12, 14, 16, 32, 64, 128]
+thread_counts = list(range(1,33))
 execution_times = []
 
 # Debug message to indicate the start of the process
