@@ -1,12 +1,12 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main() {
-    int imax = 100000;
-    int tmax = 100000;
-    int max_threads = 6;
+    int imax = 1000;
+    int tmax = 100;
+    int thread_counts[] = {1, 2, 4, 6, 8, 12, 14, 16}; // Specific thread counts to test
+    int num_threads = sizeof(thread_counts) / sizeof(thread_counts[0]);
 
     // Open the file to store results
     FILE *file = fopen("results.csv", "w");
@@ -16,7 +16,8 @@ int main() {
     }
     fprintf(file, "Threads,ExecutionTime\n"); // Write CSV header
 
-    for (int threads = 1; threads <= max_threads; threads++) {
+    for (int i = 0; i < num_threads; i++) {
+        int threads = thread_counts[i];
         char command[256];
         snprintf(command, sizeof(command), "prun -v -np 1 -t 01:00 ./assign_1_1_framework/assign1_1 %d %d %d", imax, tmax, threads);
 
