@@ -1,6 +1,9 @@
 #include "queue.h"
 #include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
+
+int terminated_queues = 0;
 
 struct queue {
     int* data;
@@ -68,4 +71,3 @@ void queue_cleanup(struct queue* q) {
     pthread_cond_destroy(&q->not_empty);
     pthread_cond_destroy(&q->not_full);
     free(q);
-}

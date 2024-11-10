@@ -1,0 +1,1 @@
+Running ./eratosthenes on 8 core(s) (taskset -c 0-7)

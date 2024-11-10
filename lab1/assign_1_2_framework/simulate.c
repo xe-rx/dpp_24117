@@ -27,6 +27,8 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
     int remainder = N % num_threads;
     int i_start, i_end;
 
+    omp_set_schedule(1, 1);
+
     omp_set_num_threads(num_threads);
 
     #pragma omp parallel private(i_start, i_end, old_array, current_array, next_array)
@@ -61,4 +63,3 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
     }
     return current_array_global;
 }
-

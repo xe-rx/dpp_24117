@@ -1,10 +1,12 @@
+#include "queue/queue.h"
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
-#include "queue/queue.h"
 
 #define QUEUE_SIZE 100
 #define MAX_PRIMES 5000
+
+extern int terminated_queues;
 
 volatile int primes_printed = 0;
 pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -21,9 +23,9 @@ void* generator_thread(void* arg) {
     return NULL;
 }
 
-void* filter_thread(void* arg) {
-    struct queue* input_q = (struct queue*)arg;
-    int prime;
+void *filter_thread(void *arg) {
+  struct queue *input_q = (struct queue *)arg;
+  int prime;
 
     if (queue_pop(input_q, &prime) == -1) {
         return NULL;
@@ -61,7 +63,7 @@ void* filter_thread(void* arg) {
 }
 
 int main() {
-    struct queue* q = queue_init(QUEUE_SIZE);
+    struct queue *q = queue_init(QUEUE_SIZE);
     pthread_t generator;
     pthread_t first_filter;
 
@@ -71,6 +73,7 @@ int main() {
     pthread_join(generator, NULL);
     pthread_join(first_filter, NULL);
 
+    printf("%d", terminated_queues);
     queue_cleanup(q);
     return 0;
 }
