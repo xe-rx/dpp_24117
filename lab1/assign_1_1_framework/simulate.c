@@ -1,9 +1,3 @@
-/*
- * simulate.c
- *
- * Implement your (parallel) simulation here!
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -11,7 +5,6 @@
 
 #define C 0.15
 
-/* Global variables */
 double *old_array_global;
 double *current_array_global;
 double *next_array_global;
@@ -40,15 +33,11 @@ void *worker(void *arg)
         i_end = i_start + chunk_size;
     }
 
-    double *old_array = old_array_global;
-    double *current_array = current_array_global;
-    double *next_array = next_array_global;
-
     for (int t = 0; t < t_max; t++) {
         for (int i = i_start; i < i_end; i++) {
-            next_array[i] = 2 * current_array[i] - old_array[i] +
-                            C * (current_array[i - 1] -
-                            (2 * current_array[i] - current_array[i + 1]));
+            next_array_global[i] = 2 * current_array_global[i] - old_array_global[i] +
+                            C * (current_array_global[i - 1] -
+                            (2 * current_array_global[i] - current_array_global[i + 1]));
         }
 
         pthread_barrier_wait(&barrier);
@@ -61,12 +50,7 @@ void *worker(void *arg)
         }
 
         pthread_barrier_wait(&barrier);
-
-        old_array = old_array_global;
-        current_array = current_array_global;
-        next_array = next_array_global;
     }
-
     pthread_exit(NULL);
 }
 

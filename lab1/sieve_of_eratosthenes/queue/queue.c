@@ -65,19 +65,9 @@ int queue_pop(struct queue* q, int* value) {
     return 0;
 }
 
-void queue_terminate(struct queue* q) {
-    pthread_mutex_lock(&q->mutex);
-    q->terminated = 1;
-    pthread_cond_broadcast(&q->not_empty);
-    pthread_cond_broadcast(&q->not_full);
-    terminated_queues++;
-    pthread_mutex_unlock(&q->mutex);
-}
-
 void queue_cleanup(struct queue* q) {
     free(q->data);
     pthread_mutex_destroy(&q->mutex);
     pthread_cond_destroy(&q->not_empty);
     pthread_cond_destroy(&q->not_full);
     free(q);
-}
