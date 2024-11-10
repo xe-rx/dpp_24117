@@ -1,5 +1,3 @@
-// queue.h
-
 #ifndef QUEUE_H
 #define QUEUE_H
 
@@ -19,10 +17,7 @@ int queue_push(struct queue* q, int value);
 // Returns 0 on success, -1 if the queue is empty and terminated
 int queue_pop(struct queue* q, int* value);
 
-// Terminates the queue, waking up all threads waiting on the queue
-void queue_terminate(struct queue* q);
-
 // Cleans up and deallocates the queue
 void queue_cleanup(struct queue* q);
 
-#endif // QUEUE_H
+#endif

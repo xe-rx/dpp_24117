@@ -7,17 +7,12 @@
 #define MAX_PRIMES 5000
 
 volatile int primes_printed = 0;
-volatile int done = 0;
 pthread_mutex_t count_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void* generator_thread(void* arg) {
     struct queue* q = (struct queue*)arg;
     int num = 2;
     while (1) {
-        if (done) {
-            queue_terminate(q);
-            break;
-        }
         if (queue_push(q, num) == -1) {
             break;
         }
@@ -40,10 +35,8 @@ void* filter_thread(void* arg) {
         printf("%d\n", prime);
         pthread_mutex_unlock(&count_mutex);
     } else {
-        done = 1;
         pthread_mutex_unlock(&count_mutex);
-        queue_terminate(input_q);
-        return NULL;
+        exit(0);
     }
 
     struct queue* output_q = queue_init(QUEUE_SIZE);
@@ -53,10 +46,6 @@ void* filter_thread(void* arg) {
     int num;
     while (1) {
         if (queue_pop(input_q, &num) == -1) {
-            break;
-        }
-        if (done) {
-            queue_terminate(output_q);
             break;
         }
         if (num % prime != 0) {

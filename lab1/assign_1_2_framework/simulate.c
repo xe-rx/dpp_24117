@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <omp.h>
@@ -6,7 +5,6 @@
 
 #define C 0.15
 
-/* Global variables */
 double *old_array_global;
 double *current_array_global;
 double *next_array_global;
@@ -31,7 +29,7 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
 
     omp_set_num_threads(num_threads);
 
-    #pragma omp parallel
+    #pragma omp parallel private(i_start, i_end, old_array, current_array, next_array)
     {
         if (omp_get_thread_num() < remainder) {
             i_start = 1 + omp_get_thread_num() * (chunk_size + 1);
@@ -43,9 +41,9 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
 
         for (int t = 0; t < t_max; t++) {
             for (int i = i_start; i < i_end; i++) {
-                next_array[i] = 2 * current_array[i] - old_array[i] +
-                                C * (current_array[i - 1] -
-                                (2 * current_array[i] - current_array[i + 1]));
+            next_array_global[i] = 2 * current_array_global[i] - old_array_global[i] +
+                            C * (current_array_global[i - 1] -
+                            (2 * current_array_global[i] - current_array_global[i + 1]));
             }
 
             #pragma omp barrier
@@ -59,13 +57,8 @@ double *simulate(const int i_max, const int t_max, const int num_threads,
             }
 
             #pragma omp barrier
-
-            old_array = old_array_global;
-            current_array = current_array_global;
-            next_array = next_array_global;
         }
     }
-
     return current_array_global;
 }
 
