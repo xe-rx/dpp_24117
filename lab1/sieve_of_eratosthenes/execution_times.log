@@ -1,1 +1,12 @@
 Running ./eratosthenes on 8 core(s) (taskset -c 0-7)
+Execution time on 8 core(s): 5.375177639 seconds
+---------------------------------------------
+Running ./eratosthenes on 4 core(s) (taskset -c 0,1,2,3)
+Execution time on 4 core(s): 12.589417408 seconds
+---------------------------------------------
+Running ./eratosthenes on 1 core(s) (taskset -c 0)
+Execution time on 1 core(s): 45.234020930 seconds
+---------------------------------------------
+Running ./eratosthenes on 16 core(s) (taskset -c 0-15)
+Execution time on 16 core(s): 1.208264774 seconds
+---------------------------------------------

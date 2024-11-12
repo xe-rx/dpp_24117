@@ -1,4 +1,3 @@
-#ifndef QUEUE_H
 #define QUEUE_H
 
 #include <pthread.h>
@@ -20,4 +19,3 @@ int queue_pop(struct queue* q, int* value);
 // Cleans up and deallocates the queue
 void queue_cleanup(struct queue* q);
 
-#endifendif // QUEUE_H
