@@ -5,6 +5,7 @@
  *
  */
 
+#include <cuda_device_runtime_api.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -24,7 +25,7 @@ using namespace std;
  *
  * For example:
  *     checkCudaCall(cudaMalloc((void **) &deviceRGB, imgS * sizeof(color_t)));
- * 
+ *
  * Special case to check the result of the last kernel invocation:
  *     kernel<<<...>>>(...);
  *     checkCudaCall(cudaGetLastError());
@@ -40,9 +41,6 @@ static void checkCudaCall(cudaError_t result) {
  * The result should be written to the given result-integer, which is an
  * integer and NOT an array like deviceDataIn. */
  __global__ void checksumKernel(unsigned int* result, unsigned int *deviceDataIn){
-
-    // YOUR CODE HERE
-
 }
 
 /* Wrapper for your checksum kernel, i.e., does the necessary preparations and
