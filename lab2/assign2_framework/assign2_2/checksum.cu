@@ -40,7 +40,30 @@ static void checkCudaCall(cudaError_t result) {
 /* Change this kernel to compute a simple, additive checksum of the given data.
  * The result should be written to the given result-integer, which is an
  * integer and NOT an array like deviceDataIn. */
- __global__ void checksumKernel(unsigned int* result, unsigned int *deviceDataIn){
+__global__ void checksumKernel(unsigned int* result, unsigned int* deviceDataIn) {
+    __shared__ unsigned int partialSum[512];
+
+    int tid = threadIdx.x + blockIdx.x * blockDim.x;
+    int local_tid = threadIdx.x;
+    unsigned int sum = 0;
+
+    for (int i = tid; i < gridDim.x * blockDim.x; i += gridDim.x * blockDim.x) {
+        sum += deviceDataIn[i];
+    }
+
+    partialSum[local_tid] = sum;
+    __syncthreads();
+
+    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
+        if (local_tid < stride) {
+            partialSum[local_tid] += partialSum[local_tid + stride];
+        }
+        __syncthreads();
+    }
+
+    if (local_tid == 0) {
+        atomicAdd(result, partialSum[0]);
+    }
 }
 
 /* Wrapper for your checksum kernel, i.e., does the necessary preparations and
