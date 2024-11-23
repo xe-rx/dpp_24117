@@ -132,55 +132,42 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
  * well. Then, it can be used to verify your parallel results and compute
  * speedups of your parallelized implementation. */
 int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
-  int i;
+  int i, valid_index = 0;
   timer sequentialTime = timer("Sequential encryption");
 
   sequentialTime.start();
   for (i = 0; i < n; i++) {
-    // if not an alphabetical character we can skip
-    if (!(isalpha(data_in[i]))) {
+    if (!isalpha(data_in[i])) {
       data_out[i] = data_in[i];
       continue;
     }
 
-    // CEASAR
+    // CAESAR
     if (key_length == 1) {
-      // Wrapping alphabet characters formula derived from:
-      // https://en.wikipedia.org/wiki/Caesar_cipher
       if (islower(data_in[i])) {
         data_out[i] = 'a' + ((data_in[i] - 'a' + key[0]) % 26);
       } else if (isupper(data_in[i])) {
         data_out[i] = 'A' + ((data_in[i] - 'A' + key[0]) % 26);
-      } else {
-        // might be unecessary to check for non character (isalpha) earlier bc
-        // of this
-        data_out[i] = data_in[i];
       }
     }
     // VIGENERE
     else {
-      if (key_length > 1) {
-        int key_index = i % key_length;
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
-        if (islower(data_in[i])) {
-          data_out[i] = 'a' + ((data_in[i] - 'a' + key[key_index]) % 26);
-        } else if (isupper(data_in[i])) {
-          data_out[i] = 'A' + ((data_in[i] - 'A' + key[key_index]) % 26);
-        } else {
-          // might be unecessary to check for non character (isalpha) earlier bc
-          // of this
-          data_out[i] = data_in[i];
-        }
+      int key_index = valid_index % key_length;
+      if (islower(data_in[i])) {
+        data_out[i] = 'a' + ((data_in[i] - 'a' + key[key_index]) % 26);
+      } else if (isupper(data_in[i])) {
+        data_out[i] = 'A' + ((data_in[i] - 'A' + key[key_index]) % 26);
       }
+      valid_index++;
     }
   }
+  // TODO: Necessary?
+  data_out[n] = '\0';
   sequentialTime.stop();
 
-  cout <<"Incoming data before SeqEncrypt" <<data_in << "Outgoing data" <<data_out << endl;
+  cout << "Incoming data before SeqEncrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
   cout << fixed << setprecision(6);
-  cout << "Encryption (sequential): \t\t" << sequentialTime.getElapsed()
-       << " seconds." << endl;
+  cout << "Encryption (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
 
   return 0;
 }
@@ -190,47 +177,46 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
  * well. Then, it can be used to verify your parallel results and compute
  * speedups of your parallelized implementation. */
 int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
-    int i;
-    timer sequentialTime = timer("Sequential decryption");
+  int i, valid_index = 0;
+  timer sequentialTime = timer("Sequential decryption");
 
-    sequentialTime.start();
-    for (i = 0; i < n; i++) {
-        if (!(isalpha(data_in[i]))) {
-            data_out[i] = data_in[i];
-            continue;
-        }
-
-        // CAESAR
-        if (key_length == 1) {
-            if (islower(data_in[i])) {
-                data_out[i] = 'a' + ((data_in[i] - 'a' - key[0] + 26) % 26);
-            } else if (isupper(data_in[i])) {
-                data_out[i] = 'A' + ((data_in[i] - 'A' - key[0] + 26) % 26);
-            } else {
-                data_out[i] = data_in[i];
-            }
-        }
-        // VIGENERE
-        else if (key_length > 1) {
-            int key_index = i % key_length;
-            if (islower(data_in[i])) {
-                data_out[i] = 'a' + ((data_in[i] - 'a' - key[key_index] + 26) % 26);
-            } else if (isupper(data_in[i])) {
-                data_out[i] = 'A' + ((data_in[i] - 'A' - key[key_index] + 26) % 26);
-            } else {
-                data_out[i] = data_in[i];
-            }
-        }
+  sequentialTime.start();
+  for (i = 0; i < n; i++) {
+    if (!isalpha(data_in[i])) {
+      data_out[i] = data_in[i];
+      continue;
     }
-    sequentialTime.stop();
 
-    cout <<"Incoming data before SeqDecrypt"<<data_in << "Outgoing data" <<data_out << endl;
-    cout << fixed << setprecision(6);
-    cout << "Decryption (sequential): \t\t" << sequentialTime.getElapsed()
-         << " seconds." << endl;
+    // CAESAR
+    if (key_length == 1) {
+      if (islower(data_in[i])) {
+        data_out[i] = 'a' + ((data_in[i] - 'a' - key[0] + 26) % 26);
+      } else if (isupper(data_in[i])) {
+        data_out[i] = 'A' + ((data_in[i] - 'A' - key[0] + 26) % 26);
+      }
+    }
+    // VIGENERE
+    else {
+      int key_index = valid_index % key_length;
+      if (islower(data_in[i])) {
+        data_out[i] = 'a' + ((data_in[i] - 'a' - key[key_index] + 26) % 26);
+      } else if (isupper(data_in[i])) {
+        data_out[i] = 'A' + ((data_in[i] - 'A' - key[key_index] + 26) % 26);
+      }
+      valid_index++;
+    }
+  }
+  // TODO: Necessary?
+  data_out[n] = '\0';
+  sequentialTime.stop();
 
-    return 0;
+  cout << "Incoming data before SeqDecrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
+  cout << fixed << setprecision(6);
+  cout << "Decryption (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
+
+  return 0;
 }
+
 
 /* Wrapper for your encrypt kernel, i.e., does the necessary preparations and
  * calls your kernel. */
