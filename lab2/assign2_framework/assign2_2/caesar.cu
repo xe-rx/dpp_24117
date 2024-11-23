@@ -46,23 +46,41 @@ static void checkCudaCall(cudaError_t result) {
 __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   char input = deviceDataIn[idx];
+  int key_length = deviceKey[0];
 
-  if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-    int key_length = deviceKey[0];
-    int shift = deviceKey[idx % key_length + 1];
-    if (input>='a' && input<='z') {
-      // Wrapping alphabet characters formula derived from:
-      // https://en.wikipedia.org/wiki/Caesar_cipher
-      deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
-    } else if (input>='A' && input<='Z') {
-      // Wrapping alphabet characters formula derived from:
-      // https://en.wikipedia.org/wiki/Caesar_cipher
-      deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+  if (key_length == 1) {
+    if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[1];
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
     }
-  } else {
-    deviceDataOut[idx] = input;
   }
 
+  if (key_length > 1) {
+   if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[idx % key_length + 1];
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
+    }
+  }
 }
 
 /* Change this kernel to properly decrypt the given data. The result should be
@@ -70,23 +88,43 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
 __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   char input = deviceDataIn[idx];
+  int key_length = deviceKey[0];
 
-  if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-    int key_length = deviceKey[0];
-    int shift = deviceKey[idx % key_length + 1];
-    if (input>='a' && input<='z') {
-      // Wrapping alphabet characters formula derived from:
-      // https://en.wikipedia.org/wiki/Caesar_cipher
-      deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
-    } else if (input>='A' && input<='Z') {
-      // Wrapping alphabet characters formula derived from:
-      // https://en.wikipedia.org/wiki/Caesar_cipher
-      deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+  if (key_length == 1) {
+    if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[1];
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
     }
-  } else {
-    deviceDataOut[idx] = input;
+
   }
 
+  if (key_length >= 1) {
+    if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[idx % key_length + 1];
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
+    }
+
+  }
 }
 
 /* Sequential implementation of encryption with the Shift cipher (and therefore
@@ -139,6 +177,7 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
   }
   sequentialTime.stop();
 
+  cout <<"Incoming data before SeqEncrypt" <<data_in << "Outgoing data" <<data_out << endl;
   cout << fixed << setprecision(6);
   cout << "Encryption (sequential): \t\t" << sequentialTime.getElapsed()
        << " seconds." << endl;
@@ -153,7 +192,6 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     int i;
     timer sequentialTime = timer("Sequential decryption");
-    cout <<data_in << endl;
 
     sequentialTime.start();
     for (i = 0; i < n; i++) {
@@ -186,6 +224,7 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     }
     sequentialTime.stop();
 
+    cout <<"Incoming data before SeqDecrypt"<<data_in << "Outgoing data" <<data_out << endl;
     cout << fixed << setprecision(6);
     cout << "Decryption (sequential): \t\t" << sequentialTime.getElapsed()
          << " seconds." << endl;
