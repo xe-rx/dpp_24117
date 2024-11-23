@@ -6,6 +6,7 @@
  *
  */
 
+#include <__clang_cuda_builtin_vars.h>
 #include <cctype>
 #include <iostream>
 #include <math.h>
@@ -16,6 +17,11 @@
 #include "timer.hh"
 
 using namespace std;
+
+// TODO: DONT KNOW IF THIS IS ALLOWED
+#define MAX_KEY_LENGTH 256
+// index 0 stores length
+__constant__ int deviceKey[MAX_KEY_LENGTH];
 
 /* Utility function, use to do error checking for CUDA calls
  *
@@ -39,15 +45,49 @@ static void checkCudaCall(cudaError_t result) {
 /* Change this kernel to properly encrypt the given data. The result should be
  * written to the given out data. */
 __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  char input = deviceDataIn[idx];
 
-  // YOUR CODE HERE
+  if (isalpha(input)) {
+    int key_length = deviceKey[0];
+    int shift = deviceKey[idx % key_length + 1];
+    if (islower(input)) {
+      // Wrapping alphabet characters formula derived from:
+      // https://en.wikipedia.org/wiki/Caesar_cipher
+      deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
+    } else if (isupper(input)) {
+      // Wrapping alphabet characters formula derived from:
+      // https://en.wikipedia.org/wiki/Caesar_cipher
+      deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+    }
+  } else {
+    deviceDataout[idx] = input;
+  }
+
 }
 
 /* Change this kernel to properly decrypt the given data. The result should be
  * written to the given out data. */
 __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  char input = deviceDataIn[idx];
 
-  // YOUR CODE HERE
+  if (isalpha(input)) {
+    int key_length = deviceKey[0];
+    int shift = deviceKey[idx % key_length + 1];
+    if (islower(input)) {
+      // Wrapping alphabet characters formula derived from:
+      // https://en.wikipedia.org/wiki/Caesar_cipher
+      deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+    } else if (isupper(input)) {
+      // Wrapping alphabet characters formula derived from:
+      // https://en.wikipedia.org/wiki/Caesar_cipher
+      deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+    }
+  } else {
+    deviceDataout[idx] = input;
+  }
+
 }
 
 /* Sequential implementation of encryption with the Shift cipher (and therefore
@@ -158,6 +198,9 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
   int threadBlockSize = 512;
+
+  // TODO, DONT KNOW IF THIS IS ALLOWED
+  cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
