@@ -281,7 +281,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
  * calls your kernel. */
 int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 4;
+  int threadBlockSize = 2;
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
