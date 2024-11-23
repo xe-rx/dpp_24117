@@ -268,9 +268,6 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                            cudaMemcpyDeviceToHost));
   memoryTime.stop();
 
-  // TODO: delete prints later
-  cout << "DEVICEIN PARALLEL: " << deviceDataIn << endl;
-  cout << "DEVICEOUT PARALLEL: " << deviceDataOut << endl;
 
   checkCudaCall(cudaFree(deviceDataIn));
   checkCudaCall(cudaFree(deviceDataOut));
