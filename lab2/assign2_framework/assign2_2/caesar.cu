@@ -6,7 +6,6 @@
  *
  */
 
-#include <__clang_cuda_builtin_vars.h>
 #include <cctype>
 #include <iostream>
 #include <math.h>

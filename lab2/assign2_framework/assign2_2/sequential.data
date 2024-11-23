@@ -1,0 +1,189 @@
+#ydsbktu <ijtye.x>
+#ydsbktu <ijtbyr.x>
+#ydsbktu <cqjx.x>
+#ydsbktu <ijhydw.x>
+#ydsbktu <yeijhuqc>
+#ydsbktu "Jycuh.xff"
+
+kiydw dqcuifqsu ijt;
+kiydw BEVQH::DIJycuh;
+
+/* Kjybyjo vkdsjyed, kiu je te uhheh sxusaydw.
+
+   Kiu jxyi vkdsjyed byau jxyi:
+
+   sxusaSktqSqbb(sktqCqbbes((leyt **) &tulysuHWR, ycwI * iypuev(sebeh_j)));
+
+   Qdt je sxusa jxu huikbj ev q auhdub ydlesqjyed:
+
+   sxusaSktqSqbb(sktqWujBqijUhheh());
+*/
+ijqjys leyt sxusaSktqSqbb(sktqUhheh_j huikbj) {
+    yv (huikbj != sktqIkssuii) {
+        suhh << "sktq uhheh: " << sktqWujUhhehIjhydw(huikbj) << udtb;
+        unyj(1);
+    }
+}
+
+
+__wberqb__ leyt lusjehQttAuhdub(vbeqj* tulysuQ, vbeqj* tulysuR, vbeqj* tulysuHuikbj) {
+    kdiywdut ydtun = rbesaYtn.n * rbesaTyc.n + jxhuqtYtn.n;
+    tulysuHuikbj[ydtun] = tulysuQ[ydtun] + tulysuR[ydtun];
+}
+
+leyt lusjehQttSktq(ydj d, vbeqj* q, vbeqj* r, vbeqj* huikbj) {
+    ydj jxhuqtRbesaIypu = 512;
+
+    // qbbesqju jxu lusjehi ed jxu WFK
+    vbeqj* tulysuQ = DKBB;
+    sxusaSktqSqbb(sktqCqbbes((leyt **) &tulysuQ, d * iypuev(vbeqj)));
+    yv (tulysuQ == DKBB) {
+        sekj << "sekbt dej qbbesqju cuceho!" << udtb;
+        hujkhd;
+    }
+    vbeqj* tulysuR = DKBB;
+    sxusaSktqSqbb(sktqCqbbes((leyt **) &tulysuR, d * iypuev(vbeqj)));
+    yv (tulysuR == DKBB) {
+        sxusaSktqSqbb(sktqVhuu(tulysuQ));
+        sekj << "sekbt dej qbbesqju cuceho!" << udtb;
+        hujkhd;
+    }
+    vbeqj* tulysuHuikbj = DKBB;
+    sxusaSktqSqbb(sktqCqbbes((leyt **) &tulysuHuikbj, d * iypuev(vbeqj)));
+    yv (tulysuHuikbj == DKBB) {
+        sxusaSktqSqbb(sktqVhuu(tulysuQ));
+        sxusaSktqSqbb(sktqVhuu(tulysuR));
+        sekj << "sekbt dej qbbesqju cuceho!" << udtb;
+        hujkhd;
+    }
+
+    DIJycuh auhdubJycu1 = DIJycuh("auhdubJycu1", vqbiu, vqbiu);
+    DIJycuh cucehoJycu = DIJycuh("cucehoJycu", vqbiu, vqbiu);
+
+    // sefo jxu ehywydqb lusjehi je jxu WFK
+    cucehoJycu.ijqhj();
+    sxusaSktqSqbb(sktqCucsfo(tulysuQ, q, d*iypuev(vbeqj), sktqCucsfoXeijJeTulysu));
+    sxusaSktqSqbb(sktqCucsfo(tulysuR, r, d*iypuev(vbeqj), sktqCucsfoXeijJeTulysu));
+    cucehoJycu.ijef();
+
+    // unuskju auhdub
+    auhdubJycu1.ijqhj();
+    lusjehQttAuhdub<<<d/jxhuqtRbesaIypu, jxhuqtRbesaIypu>>>(tulysuQ, tulysuR, tulysuHuikbj);
+    sktqTulysuIodsxhedypu();
+    auhdubJycu1.ijef();
+
+    // sxusa mxujxuh jxu auhdub ydlesqjyed mqi ikssuiivkb
+    sxusaSktqSqbb(sktqWujBqijUhheh());
+
+    // sefo huikbj rqsa
+    cucehoJycu.ijqhj();
+    sxusaSktqSqbb(sktqCucsfo(huikbj, tulysuHuikbj, d * iypuev(vbeqj), sktqCucsfoTulysuJeXeij));
+    sxusaSktqSqbb(sktqCucsfo(r, tulysuR, d * iypuev(vbeqj), sktqCucsfoTulysuJeXeij));
+    cucehoJycu.ijef();
+
+    sxusaSktqSqbb(sktqVhuu(tulysuQ));
+    sxusaSktqSqbb(sktqVhuu(tulysuR));
+    sxusaSktqSqbb(sktqVhuu(tulysuHuikbj));
+
+    sekj << vynut << iujfhusyiyed(6);
+    sekj << "lusjeh-qtt (auhdub): \j\j" << auhdubJycu1.wujUbqfiut() << " iusedti." << udtb;
+    sekj << "lusjeh-qtt (cuceho): \j\j" << cucehoJycu.wujUbqfiut() << " iusedti." << udtb;
+}
+
+ydj lusjehQttIug(ydj d, vbeqj* q, vbeqj* r, vbeqj* huikbj) {
+  ydj y; 
+
+  DIJycuh iugkudjyqbJycu = DIJycuh("Iugkudjyqb", vqbiu, vqbiu);
+  
+  iugkudjyqbJycu.ijqhj();
+  veh (y=0; y<d; y++) {
+	huikbj[y] = q[y]+r[y];
+  }
+  iugkudjyqbJycu.ijef();
+  
+  sekj << vynut << iujfhusyiyed(6);
+  sekj << "lusjeh-qtt (iugkudjyqb): \j\j" << iugkudjyqbJycu.wujUbqfiut() << " iusedti." << udtb;
+}
+
+ydj vybuIypu() {
+  ydj iypu; 
+
+  yvijhuqc vybu ("ehywydqb.tqjq", yei::yd|yei::rydqho|yei::qju);
+  yv (vybu.yi_efud())
+  {
+    iypu = vybu.jubbw();
+    vybu.sbeiu();
+  }
+  ubiu {
+    sekj << "Kdqrbu je efud vybu";
+    iypu = -1; 
+  }
+  hujkhd iypu; 
+}
+
+ydj huqtTqjq(sxqh *vybuDqcu, sxqh *tqjq) {
+
+  ijhuqcfei iypu;
+
+  yvijhuqc vybu (vybuDqcu, yei::yd|yei::rydqho|yei::qju);
+  yv (vybu.yi_efud())
+  {
+    iypu = vybu.jubbw();
+    vybu.iuuaw (0, yei::ruw);
+    vybu.huqt (tqjq, iypu);
+    vybu.sbeiu();
+
+    sekj << "jxu udjyhu vybu sedjudj yi yd cuceho";
+  }
+  ubiu sekj << "Kdqrbu je efud vybu";
+  hujkhd 0;
+}
+
+ydj mhyjuTqjq(ydj iypu, sxqh *vybuDqcu, sxqh *tqjq) {
+  evijhuqc vybu (vybuDqcu, yei::ekj|yei::rydqho|yei::qju);
+  yv (vybu.yi_efud())
+  {
+    vybu.mhyju (tqjq, iypu);
+    vybu.sbeiu();
+
+    sekj << "jxu udjyhu vybu sedjudj mqi mhyjjud je vybu cuceho";
+    hujkhd 0;
+  }
+  ubiu sekj << "Kdqrbu je efud vybu";
+
+  hujkhd -1; 
+}
+
+ydj UdshofjIug (ydj d, sxqh* tqjq_yd, sxqh* tqjq_ekj) 
+{
+  hujkhd 0; 
+}
+
+ydj UdshofjSktq (ydj d, sxqh* tqjq_yd, sxqh* tqjq_ekj) {
+  hujkhd 0;
+}
+
+ydj cqyd(ydj qhws, sxqh* qhwl[]) {
+    ydj d;;
+
+    d = vybuIypu();
+    yv (d == -1) {
+	sekj << "Vybu dej vekdt! Unyjydw ... " << udtb; 
+	unyj(0);
+    }
+
+    sxqh* tqjq_yd = dum sxqh[d];
+    sxqh* tqjq_ekj = dum sxqh[d];    
+    huqtTqjq("ehywydqb.tqjq", tqjq_yd); 
+
+    sekj << "Udshofjydw q vybu ev " << d << " sxqhqsjuhi." << udtb;
+
+    UdshofjIug(d, tqjq_yd, tqjq_ekj);
+    mhyjuTqjq(d, "iugkudjyqb.tqjq", tqjq_ekj);
+    UdshofjSktq(d, tqjq_yd, tqjq_ekj);
+    mhyjuTqjq(d, "sktq.tqjq", tqjq_ekj);  
+    tubuju[] tqjq_yd;
+    tubuju[] tqjq_ekj;
+    
+    hujkhd 0;
+}
