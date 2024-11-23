@@ -161,8 +161,6 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
       valid_index++;
     }
   }
-  // TODO: Necessary?
-  data_out[n] = '\0';
   sequentialTime.stop();
 
   cout << "Incoming data before SeqEncrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
@@ -182,32 +180,31 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 
   sequentialTime.start();
   for (i = 0; i < n; i++) {
-    if (!isalpha(data_out[i])) {
-      data_in[i] = data_out[i];
+    if (!isalpha(data_in[i])) {
+      data_out[i] = data_in[i];
       continue;
     }
 
     // CAESAR
     if (key_length == 1) {
-      if (islower(data_out[i])) {
-        data_in[i] = 'a' + ((data_out[i] - 'a' - key[0] + 26) % 26);
-      } else if (isupper(data_out[i])) {
-        data_in[i] = 'A' + ((data_out[i] - 'A' - key[0] + 26) % 26);
+      if (islower(data_in[i])) {
+        data_out[i] = 'a' + ((data_in[i] - 'a' - key[0] + 26) % 26);
+      } else if (isupper(data_in[i])) {
+        data_out[i] = 'A' + ((data_in[i] - 'A' - key[0] + 26) % 26);
       }
     }
     // VIGENERE
     else {
       int key_index = valid_index % key_length;
-      if (islower(data_out[i])) {
-        data_in[i] = 'a' + ((data_out[i] - 'a' - key[key_index] + 26) % 26);
+      if (islower(data_in[i])) {
+        data_out[i] = 'a' + ((data_in[i] - 'a' - key[key_index] + 26) % 26);
       } else if (isupper(data_in[i])) {
-        data_in[i] = 'A' + ((data_out[i] - 'A' - key[key_index] + 26) % 26);
+        data_out[i] = 'A' + ((data_in[i] - 'A' - key[key_index] + 26) % 26);
       }
       valid_index++;
     }
   }
-  // TODO: Necessary?
-  data_in[n] = '\0';
+
   sequentialTime.stop();
 
   cout << "Incoming data before SeqDecrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
@@ -216,7 +213,6 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 
   return 0;
 }
-
 
 /* Wrapper for your encrypt kernel, i.e., does the necessary preparations and
  * calls your kernel. */
