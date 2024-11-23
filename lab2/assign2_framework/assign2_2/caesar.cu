@@ -61,7 +61,7 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
       deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
     }
   } else {
-    deviceDataout[idx] = input;
+    deviceDataOut[idx] = input;
   }
 
 }
@@ -85,7 +85,7 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
       deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
     }
   } else {
-    deviceDataout[idx] = input;
+    deviceDataOut[idx] = input;
   }
 
 }
