@@ -207,7 +207,7 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     }
   }
   // TODO: Necessary?
-  data_out[n] = '\0';
+  data_in[n] = '\0';
   sequentialTime.stop();
 
   cout << "Incoming data before SeqDecrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
@@ -251,6 +251,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                            cudaMemcpyHostToDevice));
   memoryTime.stop();
 
+  cout << "CALLING PARALLELISED ENCRYPTION" << endl;
   // execute kernel
   kernelTime1.start();
   encryptKernel<<<n / threadBlockSize, threadBlockSize>>>(deviceDataIn,
@@ -266,6 +267,10 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   checkCudaCall(cudaMemcpy(data_out, deviceDataOut, n * sizeof(char),
                            cudaMemcpyDeviceToHost));
   memoryTime.stop();
+
+  // TODO: delete prints later
+  cout << "DEVICEIN PARALLEL: " << deviceDataIn << endl;
+  cout << "DEVICEOUT PARALLEL: " << deviceDataOut << endl;
 
   checkCudaCall(cudaFree(deviceDataIn));
   checkCudaCall(cudaFree(deviceDataOut));
