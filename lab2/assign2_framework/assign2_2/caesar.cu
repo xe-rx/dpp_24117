@@ -153,6 +153,7 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     int i;
     timer sequentialTime = timer("Sequential decryption");
+    cout <<data_in << endl;
 
     sequentialTime.start();
     for (i = 0; i < n; i++) {
