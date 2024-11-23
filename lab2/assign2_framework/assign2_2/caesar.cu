@@ -48,14 +48,14 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   char input = deviceDataIn[idx];
 
-  if (isalpha(input)) {
+  if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
     int key_length = deviceKey[0];
     int shift = deviceKey[idx % key_length + 1];
-    if (islower(input)) {
+    if (input>='a' && input<='z') {
       // Wrapping alphabet characters formula derived from:
       // https://en.wikipedia.org/wiki/Caesar_cipher
       deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
-    } else if (isupper(input)) {
+    } else if (input>='A' && input<='Z') {
       // Wrapping alphabet characters formula derived from:
       // https://en.wikipedia.org/wiki/Caesar_cipher
       deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
@@ -72,14 +72,14 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   char input = deviceDataIn[idx];
 
-  if (isalpha(input)) {
+  if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
     int key_length = deviceKey[0];
     int shift = deviceKey[idx % key_length + 1];
-    if (islower(input)) {
+    if (input>='a' && input<='z') {
       // Wrapping alphabet characters formula derived from:
       // https://en.wikipedia.org/wiki/Caesar_cipher
       deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
-    } else if (isupper(input)) {
+    } else if (input>='A' && input<='Z') {
       // Wrapping alphabet characters formula derived from:
       // https://en.wikipedia.org/wiki/Caesar_cipher
       deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
