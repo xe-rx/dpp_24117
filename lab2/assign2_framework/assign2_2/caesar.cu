@@ -218,7 +218,7 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
  * calls your kernel. */
 int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 512;
+  int threadBlockSize = 4;
 
   // TODO, DONT KNOW IF THIS IS ALLOWED
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
@@ -250,8 +250,10 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   cout << "CALLING PARALLELISED ENCRYPTION" << endl;
   // execute kernel
   kernelTime1.start();
-  encryptKernel<<<n / threadBlockSize, threadBlockSize>>>(deviceDataIn,
-                                                          deviceDataOut);
+
+  //TODO, added gridsize check
+  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  encryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
@@ -281,7 +283,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
  * calls your kernel. */
 int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 2;
+  int threadBlockSize = 4;
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
@@ -309,8 +311,10 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   // execute kernel
   kernelTime1.start();
-  decryptKernel<<<n / threadBlockSize, threadBlockSize>>>(deviceDataIn,
-                                                          deviceDataOut);
+
+  // TODO, added gridsize check
+  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  decryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
