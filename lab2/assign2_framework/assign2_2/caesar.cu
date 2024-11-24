@@ -92,7 +92,7 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut, int lengt
 
   if (length == 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-      int shift = deviceKey[0];
+      int shift = deviceKey[0] % 26;
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -110,7 +110,7 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut, int lengt
 
   if (length >= 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-      int shift = deviceKey[idx % length];
+      int shift = deviceKey[idx % length] % 26;
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -186,12 +186,14 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     }
 
     // CAESAR
+
     if (key_length == 1) {
-      if (islower(data_in[i])) {
-        data_out[i] = 'a' + ((data_in[i] - 'a' - key[0] + 26) % 26);
-      } else if (isupper(data_in[i])) {
-        data_out[i] = 'A' + ((data_in[i] - 'A' - key[0] + 26) % 26);
-      }
+        int shift = key[0] % 26;
+        if (islower(data_in[i])) {
+            data_out[i] = 'a' + ((data_in[i] - 'a' - shift + 26) % 26);
+        } else if (isupper(data_in[i])) {
+            data_out[i] = 'A' + ((data_in[i] - 'A' - shift + 26) % 26);
+        }
     }
     // VIGENERE
     else {
