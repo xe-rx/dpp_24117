@@ -96,11 +96,11 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input>='A' && input<='Z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
       deviceDataOut[idx] = input;
@@ -114,11 +114,11 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input>='A' && input<='Z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
       deviceDataOut[idx] = input;
