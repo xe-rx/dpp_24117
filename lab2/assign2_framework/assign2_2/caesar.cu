@@ -18,9 +18,7 @@
 using namespace std;
 
 
-// TODO: DONT KNOW IF THIS IS ALLOWED
 #define MAX_KEY_LENGTH 256
-// index 0 stores length
 __constant__ int deviceKey[MAX_KEY_LENGTH];
 
 /* Utility function, use to do error checking for CUDA calls
@@ -185,7 +183,6 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
     }
 
     // CAESAR
-
     if (key_length == 1) {
         int shift = key[0] % 26;
         if (islower(data_in[i])) {
@@ -223,13 +220,6 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   // TODO, DONT KNOW IF THIS IS ALLOWED
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
 
-  // Debug: Verify key in device memory
-  int hostKey[MAX_KEY_LENGTH];
-  cudaMemcpyFromSymbol(hostKey, deviceKey, (key_length + 1) * sizeof(int));
-  printf("KEYYYYYY:");
-  for (int i = 0; i <= key_length; i++) printf("%d ", hostKey[i]);
-  printf("\n");
-
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
   checkCudaCall(cudaMalloc((void **)&deviceDataIn, n * sizeof(char)));
@@ -254,7 +244,6 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                            cudaMemcpyHostToDevice));
   memoryTime.stop();
 
-  cout << "CALLING PARALLELISED ENCRYPTION" << endl;
   // execute kernel
   kernelTime1.start();
 
@@ -297,7 +286,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
  * calls your kernel. */
 int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 4;
+  int threadBlockSize = 512;
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
