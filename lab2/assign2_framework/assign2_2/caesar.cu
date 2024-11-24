@@ -232,7 +232,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   // Debug: Verify key in device memory
   int hostKey[MAX_KEY_LENGTH];
   cudaMemcpyFromSymbol(hostKey, deviceKey, (key_length + 1) * sizeof(int));
-  printf("Key in device memory: ");
+  printf("KEYYYYYY:");
   for (int i = 0; i <= key_length; i++) printf("%d ", hostKey[i]);
   printf("\n");
 
@@ -277,6 +277,9 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   memoryTime.start();
   checkCudaCall(cudaMemcpy(data_out, deviceDataOut, n * sizeof(char),
                            cudaMemcpyDeviceToHost));
+  for (int i = 0; i < 10; i++) {
+      std::cout << "data_out[" << i << "]: " << data_out[i] << std::endl;
+  }
   memoryTime.stop();
 
 
@@ -388,6 +391,8 @@ int main(int argc, char *argv[]) {
 
   EncryptSeq(n, data_in, data_out, key_length, enc_key);
   writeData(n, "sequential.data", data_out);
+
+
   EncryptCuda(n, data_in, data_out, key_length, enc_key);
   writeData(n, "cuda.data", data_out);
 
