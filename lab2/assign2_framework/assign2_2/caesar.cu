@@ -163,7 +163,6 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
   }
   sequentialTime.stop();
 
-  cout << "Incoming data before SeqEncrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
   cout << fixed << setprecision(6);
   cout << "Encryption (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
 
@@ -209,7 +208,6 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 
   sequentialTime.stop();
 
-  cout << "Incoming data before SeqDecrypt: " << data_in << "\nOutgoing data: " << data_out << endl;
   cout << fixed << setprecision(6);
   cout << "Decryption (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
 
@@ -260,8 +258,12 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   // execute kernel
   kernelTime1.start();
 
-  //TODO, added gridsize check
-  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  int gridSize;
+  if (n < threadBlockSize) {
+    gridSize = 1;
+  } else {
+    gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  }
   encryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut, key_length);
   cudaDeviceSynchronize();
   kernelTime1.stop();
@@ -324,8 +326,12 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
   // execute kernel
   kernelTime1.start();
 
-  // TODO, added gridsize check
-  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  int gridSize;
+  if (n < threadBlockSize) {
+    gridSize = 1;
+  } else {
+    gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  }
   decryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut, key_length);
   cudaDeviceSynchronize();
   kernelTime1.stop();
