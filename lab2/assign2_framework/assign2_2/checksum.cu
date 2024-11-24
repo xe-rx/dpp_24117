@@ -71,15 +71,18 @@ __global__ void checksumKernel(unsigned int* result, unsigned int* deviceDataIn)
 unsigned int checksumSeq (int n, unsigned int* data_in) {
     int i;
     timer sequentialTime = timer("Sequential checksum");
+    unsigned int checksum = 0;
 
     sequentialTime.start();
-    for (i=0; i<n; i++) {}
+    for (i=0; i<n; i++) {
+        checksum += data_in[i];
+    }
     sequentialTime.stop();
 
     cout << fixed << setprecision(6);
     cout << "Checksum (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
 
-    return 0;
+    return checksum;
 }
 
 /**
@@ -88,7 +91,7 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
  * on the GPU. It then adds all values together and prints the checksum
  */
  unsigned int checksumCuda (int n, unsigned int* data_in) {
-    int threadBlockSize = 512;
+    int threadBlockSize = 4;
 
     // Allocate the vectors & the result int on the GPU
     unsigned int* deviceDataIn = NULL;
@@ -113,7 +116,9 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     memoryTime.stop();
 
     kernelTime.start();
-    checksumKernel<<<n/threadBlockSize, threadBlockSize>>>(deviceResult, deviceDataIn);
+    // TODO: added gridsize check
+    int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+    checksumKernel<<<gridSize, threadBlockSize>>>(deviceResult, deviceDataIn);
     cudaDeviceSynchronize();
     kernelTime.stop();
 

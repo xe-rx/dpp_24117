@@ -51,6 +51,12 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
   if (key_length == 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
       int shift = deviceKey[1];
+
+      //TODO DEBUG
+      if (idx < 10) {
+          printf("Thread %d: input='%c', shift=%d, output='%c'\n", idx, input, shift, deviceDataOut[idx]);
+      }
+
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -96,11 +102,11 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input>='A' && input<='Z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
       deviceDataOut[idx] = input;
@@ -114,11 +120,11 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'a' + (input - 'a' - shift) % 26;
+        deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input>='A' && input<='Z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
-        deviceDataOut[idx] = 'A' + (input - 'A' - shift) % 26;
+        deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
       deviceDataOut[idx] = input;
@@ -218,10 +224,17 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
  * calls your kernel. */
 int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 512;
+  int threadBlockSize = 4;
 
   // TODO, DONT KNOW IF THIS IS ALLOWED
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
+
+  // Debug: Verify key in device memory
+  int hostKey[MAX_KEY_LENGTH];
+  cudaMemcpyFromSymbol(hostKey, deviceKey, (key_length + 1) * sizeof(int));
+  printf("Key in device memory: ");
+  for (int i = 0; i <= key_length; i++) printf("%d ", hostKey[i]);
+  printf("\n");
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
@@ -250,8 +263,10 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   cout << "CALLING PARALLELISED ENCRYPTION" << endl;
   // execute kernel
   kernelTime1.start();
-  encryptKernel<<<n / threadBlockSize, threadBlockSize>>>(deviceDataIn,
-                                                          deviceDataOut);
+
+  //TODO, added gridsize check
+  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  encryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
@@ -281,7 +296,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
  * calls your kernel. */
 int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
-  int threadBlockSize = 2;
+  int threadBlockSize = 4;
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
@@ -309,8 +324,10 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   // execute kernel
   kernelTime1.start();
-  decryptKernel<<<n / threadBlockSize, threadBlockSize>>>(deviceDataIn,
-                                                          deviceDataOut);
+
+  // TODO, added gridsize check
+  int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+  decryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
