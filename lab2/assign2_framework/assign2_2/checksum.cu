@@ -71,15 +71,18 @@ __global__ void checksumKernel(unsigned int* result, unsigned int* deviceDataIn)
 unsigned int checksumSeq (int n, unsigned int* data_in) {
     int i;
     timer sequentialTime = timer("Sequential checksum");
+    unsigned int checksum = 0;
 
     sequentialTime.start();
-    for (i=0; i<n; i++) {}
+    for (i=0; i<n; i++) {
+        checksum += data_in[i];
+    }
     sequentialTime.stop();
 
     cout << fixed << setprecision(6);
     cout << "Checksum (sequential): \t\t" << sequentialTime.getElapsed() << " seconds." << endl;
 
-    return 0;
+    return checksum;
 }
 
 /**
