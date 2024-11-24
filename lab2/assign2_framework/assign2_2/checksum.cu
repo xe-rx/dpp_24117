@@ -120,7 +120,7 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     if (n < gridSize) {
       gridSize = 1;
     } else {
-      int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+      gridSize = (n + threadBlockSize - 1) / threadBlockSize;
     }
     checksumKernel<<<gridSize, threadBlockSize>>>(deviceResult, deviceDataIn, n);
     cudaDeviceSynchronize();
