@@ -1,10 +1,3 @@
-/*
- * checksum.cu
- *
- * You can implement the CUDA-accelerated checksum calculator in this file.
- *
- */
-
 #include <cuda_device_runtime_api.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,19 +10,6 @@
 
 using namespace std;
 
-
-/* Utility function, use to do error checking for CUDA calls
- *
- * Use this function like this:
- *     checkCudaCall(<cuda_call>);
- *
- * For example:
- *     checkCudaCall(cudaMalloc((void **) &deviceRGB, imgS * sizeof(color_t)));
- *
- * Special case to check the result of the last kernel invocation:
- *     kernel<<<...>>>(...);
- *     checkCudaCall(cudaGetLastError());
-**/
 static void checkCudaCall(cudaError_t result) {
   if (result != cudaSuccess) {
       cerr << "cuda error: " << cudaGetErrorString(result) << endl;
@@ -37,9 +17,8 @@ static void checkCudaCall(cudaError_t result) {
   }
 }
 
-/* Change this kernel to compute a simple, additive checksum of the given data.
- * The result should be written to the given result-integer, which is an
- * integer and NOT an array like deviceDataIn. */
+// checksumKernel: CUDA kernel to compute an additive checksum for input data.
+// Computes the checksum in shared memory and aggregates results using atomic operations.
 __global__ void checksumKernel(unsigned int* result, const unsigned int* deviceDataIn, int n) {
     extern __shared__ unsigned int sdata[];
 
@@ -66,9 +45,7 @@ __global__ void checksumKernel(unsigned int* result, const unsigned int* deviceD
     }
 }
 
-
-/* Wrapper for your checksum kernel, i.e., does the necessary preparations and
- * calls your kernel. */
+// checksumSeq: Sequentially computes an additive checksum of the input data.
 unsigned int checksumSeq (int n, unsigned int* data_in) {
     int i;
     timer sequentialTime = timer("Sequential checksum");
@@ -86,15 +63,9 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     return checksum;
 }
 
-/**
- * The checksumCuda handler that initialises the arrays to be used and calls
- * the checksum kernel. It also computes the missing values not calculated
- * on the GPU. It then adds all values together and prints the checksum
- */
- unsigned int checksumCuda (int n, unsigned int* data_in) {
+unsigned int checksumCuda (int n, unsigned int* data_in) {
     int threadBlockSize = 512;
 
-    // Allocate the vectors & the result int on the GPU
     unsigned int* deviceDataIn = NULL;
     checkCudaCall(cudaMalloc((void **) &deviceDataIn, n * sizeof(unsigned int)));
     if (deviceDataIn == NULL) {
@@ -111,7 +82,6 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     timer kernelTime  = timer("kernelTime");
     timer memoryTime = timer("memoryTime");
 
-    // Copy the original vectors to the GPU
     memoryTime.start();
     checkCudaCall(cudaMemcpy(deviceDataIn, data_in, n*sizeof(unsigned int), cudaMemcpyHostToDevice));
     memoryTime.stop();
@@ -125,18 +95,14 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     cudaDeviceSynchronize();
     kernelTime.stop();
 
-    // Check whether the kernel invocation was successful
     checkCudaCall(cudaGetLastError());
 
-    // Copies back the correct data
     unsigned int result;
     checkCudaCall(cudaMemcpy(&result, deviceResult, sizeof(unsigned int), cudaMemcpyDeviceToHost));
 
-    // Releases the GPU data
     checkCudaCall(cudaFree(deviceDataIn));
     checkCudaCall(cudaFree(deviceResult));
 
-    // The times are printed
     cout << fixed << setprecision(6);
     cout << "Kernel: \t\t" << kernelTime.getElapsed() << " seconds." << endl;
     cout << "Memory: \t\t" << memoryTime.getElapsed() << " seconds." << endl;
@@ -144,13 +110,11 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     return result;
 }
 
-/* Entry point to the program. */
 int main(int argc, char* argv[]) {
     int n;
     char* mode;
     char* fileName;
 
-    // Arg parse
     if (argc == 3) {
         fileName = argv[1];
         mode = argv[2];
@@ -184,17 +148,13 @@ int main(int argc, char* argv[]) {
         data_in_raw[i] = data_in[i];
     }
 
-    /* Check the option to determine the functions to be called */
     if (strcmp(mode, "seq") == 0){
-        // Only sequential checkusm is ran
         unsigned int checksum = checksumSeq(n, data_in_raw);
         cout << "Sequential checksum: " << checksum << endl;
     } else if (strcmp(mode, "cuda") == 0) {
-        // Only cuda checksum is ran
         unsigned int checksum = checksumCuda(n, data_in_raw);
         cout << "CUDA checksum: " << checksum << endl;
     } else if (strcmp(mode, "both") == 0){
-        // Both the sequential and the cuda checksum are run
         unsigned int checksum = checksumCuda(n, data_in_raw);
         cout << "CUDA checksum: " << checksum << endl;
         checksum = checksumSeq(n, data_in_raw);
@@ -211,3 +171,4 @@ int main(int argc, char* argv[]) {
     delete[] data_in_raw;
     return EXIT_SUCCESS;
 }
+

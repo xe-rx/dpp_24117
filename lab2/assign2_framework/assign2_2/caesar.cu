@@ -1,11 +1,3 @@
-/*
- * caesar.cu
- *
- * You can implement your CUDA-accelerated encryption and decryption algorithms
- * in this file.
- *
- */
-
 #include "file.hh"
 #include "timer.hh"
 #include <cctype>
@@ -20,18 +12,6 @@ using namespace std;
 #define MAX_KEY_LENGTH 256
 __constant__ int deviceKey[MAX_KEY_LENGTH];
 
-/* Utility function, use to do error checking for CUDA calls
- *
- * Use this function like this:
- *     checkCudaCall(<cuda_call>);
- *
- * For example:
- *     checkCudaCall(cudaMalloc((void **) &deviceRGB, imgS * sizeof(color_t)));
- *
- * Special case to check the result of the last kernel invocation:
- *     kernel<<<...>>>(...);
- *     checkCudaCall(cudaGetLastError());
- **/
 static void checkCudaCall(cudaError_t result) {
   if (result != cudaSuccess) {
     cerr << "cuda error: " << cudaGetErrorString(result) << endl;
@@ -39,8 +19,9 @@ static void checkCudaCall(cudaError_t result) {
   }
 }
 
-/* Change this kernel to properly encrypt the given data. The result should be
- * written to the given out data. */
+// encryptKernel: CUDA kernel that encrypts data using Caesar or Vigenère cipher.
+// The kernel processes the input data on the GPU and writes the encrypted result
+// to the output array based on the provided encryption key.
 __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut,
                               int length) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -51,12 +32,8 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut,
       int shift = deviceKey[0];
 
       if (input >= 'a' && input <= 'z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
       } else if (input >= 'A' && input <= 'Z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
       }
     } else {
@@ -68,12 +45,8 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut,
     if ((input >= 'A' && input <= 'Z') || (input >= 'a' && input <= 'z')) {
       int shift = deviceKey[idx % length];
       if (input >= 'a' && input <= 'z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
       } else if (input >= 'A' && input <= 'Z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
       }
     } else {
@@ -82,8 +55,9 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut,
   }
 }
 
-/* Change this kernel to properly decrypt the given data. The result should be
- * written to the given out data. */
+// decryptKernel: CUDA kernel that decrypts data encrypted with Caesar or Vigenère cipher.
+// The kernel processes the input data on the GPU and writes the decrypted result
+// to the output array using the provided decryption key.
 __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut,
                               int length) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -93,12 +67,8 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut,
     if ((input >= 'A' && input <= 'Z') || (input >= 'a' && input <= 'z')) {
       int shift = deviceKey[0] % 26;
       if (input >= 'a' && input <= 'z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input >= 'A' && input <= 'Z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
@@ -110,12 +80,8 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut,
     if ((input >= 'A' && input <= 'Z') || (input >= 'a' && input <= 'z')) {
       int shift = deviceKey[idx % length] % 26;
       if (input >= 'a' && input <= 'z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'a' + (input - 'a' - shift + 26) % 26;
       } else if (input >= 'A' && input <= 'Z') {
-        // Wrapping alphabet characters formula derived from:
-        // https://en.wikipedia.org/wiki/Caesar_cipher
         deviceDataOut[idx] = 'A' + (input - 'A' - shift + 26) % 26;
       }
     } else {
@@ -124,10 +90,10 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut,
   }
 }
 
-/* Sequential implementation of encryption with the Shift cipher (and therefore
- * also of Caesar's cipher, if key_length == 1), which you need to implement as
- * well. Then, it can be used to verify your parallel results and compute
- * speedups of your parallelized implementation. */
+
+// EncryptSeq: Performs sequential encryption of input data using Caesar or Vigenère cipher.
+// The function processes the input array, applying the encryption key to generate
+// the encrypted output in the output array.
 int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 
   int i, valid_index = 0;
@@ -140,16 +106,13 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
       continue;
     }
 
-    // CAESAR
     if (key_length == 1) {
       if (islower(data_in[i])) {
         data_out[i] = 'a' + ((data_in[i] - 'a' + key[0]) % 26);
       } else if (isupper(data_in[i])) {
         data_out[i] = 'A' + ((data_in[i] - 'A' + key[0]) % 26);
       }
-    }
-    // VIGENERE
-    else {
+    } else {
       int key_index = valid_index % key_length;
       if (islower(data_in[i])) {
         data_out[i] = 'a' + ((data_in[i] - 'a' + key[key_index]) % 26);
@@ -168,10 +131,9 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
   return 0;
 }
 
-/* Sequential implementation of decryption with the Shift cipher (and therefore
- * also of Caesar's cipher, if key_length == 1), which you need to implement as
- * well. Then, it can be used to verify your parallel results and compute
- * speedups of your parallelized implementation. */
+// DecryptSeq: Performs sequential decryption of data encrypted with Caesar or Vigenère cipher.
+// The function processes the input array, applying the decryption key to restore
+// the original data in the output array.
 int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
 
   int i, valid_index = 0;
@@ -184,7 +146,6 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
       continue;
     }
 
-    // CAESAR
     if (key_length == 1) {
       int shift = key[0] % 26;
       if (islower(data_in[i])) {
@@ -192,9 +153,7 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
       } else if (isupper(data_in[i])) {
         data_out[i] = 'A' + ((data_in[i] - 'A' - shift + 26) % 26);
       }
-    }
-    // VIGENERE
-    else {
+    } else {
       int key_index = valid_index % key_length;
       int shift = key[key_index] % 26;
       if (islower(data_in[i])) {
@@ -215,15 +174,12 @@ int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
   return 0;
 }
 
-/* Wrapper for your encrypt kernel, i.e., does the necessary preparations and
- * calls your kernel. */
 int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
   int threadBlockSize = 4;
 
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
 
-  // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
   checkCudaCall(cudaMalloc((void **)&deviceDataIn, n * sizeof(char)));
   if (deviceDataIn == NULL) {
@@ -241,13 +197,11 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   timer kernelTime1 = timer("kernelTime");
   timer memoryTime = timer("memoryTime");
 
-  // copy the original vectors to the GPU
   memoryTime.start();
   checkCudaCall(cudaMemcpy(deviceDataIn, data_in, n * sizeof(char),
                            cudaMemcpyHostToDevice));
   memoryTime.stop();
 
-  // execute kernel
   kernelTime1.start();
 
   int gridSize;
@@ -261,10 +215,8 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
-  // check whether the kernel invocation was successful
   checkCudaCall(cudaGetLastError());
 
-  // copy result back
   memoryTime.start();
   checkCudaCall(cudaMemcpy(data_out, deviceDataOut, n * sizeof(char),
                            cudaMemcpyDeviceToHost));
@@ -282,13 +234,10 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   return 0;
 }
 
-/* Wrapper for your decrypt kernel, i.e., does the necessary preparations and
- * calls your kernel. */
 int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
   int threadBlockSize = 512;
 
-  // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
   checkCudaCall(cudaMalloc((void **)&deviceDataIn, n * sizeof(char)));
   if (deviceDataIn == NULL) {
@@ -306,13 +255,11 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
   timer kernelTime1 = timer("kernelTime");
   timer memoryTime = timer("memoryTime");
 
-  // copy the original vectors to the GPU
   memoryTime.start();
   checkCudaCall(cudaMemcpy(deviceDataIn, data_in, n * sizeof(char),
                            cudaMemcpyHostToDevice));
   memoryTime.stop();
 
-  // execute kernel
   kernelTime1.start();
 
   int gridSize;
@@ -326,10 +273,8 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
-  // check whether the kernel invocation was successful
   checkCudaCall(cudaGetLastError());
 
-  // copy result back
   memoryTime.start();
   checkCudaCall(cudaMemcpy(data_out, deviceDataOut, n * sizeof(char),
                            cudaMemcpyDeviceToHost));
@@ -347,9 +292,7 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
   return 0;
 }
 
-/* Entry point to the function! */
 int main(int argc, char *argv[]) {
-  // Check if there are enough arguments
   if (argc < 2) {
     cout << "Usage: " << argv[0] << " key..." << endl;
     cout << " - key: one or more values for the encryption key, separated "
@@ -359,14 +302,12 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  // Parse the keys from the command line arguments
   int key_length = argc - 1;
   int *enc_key = new int[key_length];
   for (int i = 0; i < key_length; i++) {
     enc_key[i] = atoi(argv[i + 1]);
   }
 
-  // Check if the original.data file exists and what it's size is
   int n;
   n = fileSize("original.data");
   if (n == -1) {
@@ -374,7 +315,6 @@ int main(int argc, char *argv[]) {
     exit(0);
   }
 
-  // Read the file in memory from the disk
   char *data_in = new char[n];
   char *data_out = new char[n];
   readData("original.data", data_in);
@@ -400,3 +340,4 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
+
