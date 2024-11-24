@@ -129,14 +129,8 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut,
  * well. Then, it can be used to verify your parallel results and compute
  * speedups of your parallelized implementation. */
 int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
-  cout << "ENCRYPT: Key Length = " << key_length << ", Key Values = ";
-  for (int i = 0; i < key_length; i++) {
-    cout << key[i] << " ";
-  }
-  cout << endl;
 
   int i, valid_index = 0;
-
   timer sequentialTime = timer("Sequential encryption");
 
   sequentialTime.start();
@@ -179,11 +173,6 @@ int EncryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
  * well. Then, it can be used to verify your parallel results and compute
  * speedups of your parallelized implementation. */
 int DecryptSeq(int n, char *data_in, char *data_out, int key_length, int *key) {
-  cout << "Input to DecryptSeq: ";
-  for (int j = 0; j < n; j++) {
-    cout << data_in[j];
-  }
-  cout << endl;
 
   int i, valid_index = 0;
   timer sequentialTime = timer("Sequential decryption");
