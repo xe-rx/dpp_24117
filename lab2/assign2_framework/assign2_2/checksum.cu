@@ -117,7 +117,7 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     memoryTime.stop();
 
     kernelTime.start();
-    int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+    int gridSize = (n + threadBlockSize - 1 * 2) / threadBlockSize * 2;
     if (gridSize == 0) {
       gridSize = 1;
     }
