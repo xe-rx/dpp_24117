@@ -218,7 +218,6 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
                 int *key) {
   int threadBlockSize = 4;
 
-  // TODO, DONT KNOW IF THIS IS ALLOWED
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
 
   // allocate the vectors on the GPU
