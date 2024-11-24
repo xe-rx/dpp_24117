@@ -20,8 +20,4 @@ int queue_pop(struct queue* q, int* value);
 // Cleans up and deallocates the queue
 void queue_cleanup(struct queue* q);
 
-<<<<<<< HEAD
 #endif
-=======
-#endifendif // QUEUE_H
->>>>>>> refs/remotes/origin/main
