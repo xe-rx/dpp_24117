@@ -45,22 +45,55 @@ static void checkCudaCall(cudaError_t result) {
 /* Change this kernel to properly encrypt the given data. The result should be
  * written to the given out data. */
 __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut, int length){
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    char input = deviceDataIn[idx];
-    deviceDataOut[idx] = input + 1;  // Simplified operation for debugging
-}
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx > length) { return; }
+  char input = deviceDataIn[idx];
 
+  if (length == 1) {
+    if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[0];
+
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
+    }
+  }
+
+  if (length > 1) {
+   if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
+      int shift = deviceKey[idx % length];
+      if (input>='a' && input<='z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
+      } else if (input>='A' && input<='Z') {
+        // Wrapping alphabet characters formula derived from:
+        // https://en.wikipedia.org/wiki/Caesar_cipher
+        deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
+      }
+    } else {
+      deviceDataOut[idx] = input;
+    }
+  }
+}
 
 /* Change this kernel to properly decrypt the given data. The result should be
  * written to the given out data. */
-__global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
+__global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut, int length) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   char input = deviceDataIn[idx];
-  int key_length = deviceKey[0];
 
-  if (key_length == 1) {
+  if (length == 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-      int shift = deviceKey[1];
+      int shift = deviceKey[0];
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -76,9 +109,9 @@ __global__ void decryptKernel(char *deviceDataIn, char *deviceDataOut) {
 
   }
 
-  if (key_length >= 1) {
+  if (length >= 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
-      int shift = deviceKey[idx % key_length + 1];
+      int shift = deviceKey[idx % length];
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -292,7 +325,7 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   // TODO, added gridsize check
   int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
-  decryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
+  decryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut, key_length);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
