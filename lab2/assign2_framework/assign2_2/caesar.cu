@@ -46,7 +46,6 @@ static void checkCudaCall(cudaError_t result) {
  * written to the given out data. */
 __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut, int length){
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx > length) { return; }
   char input = deviceDataIn[idx];
 
   if (length == 1) {
