@@ -17,6 +17,9 @@
 
 using namespace std;
 
+
+__device__ int nonAlphaCounter = 0;  // Global counter in device memory
+
 // TODO: DONT KNOW IF THIS IS ALLOWED
 #define MAX_KEY_LENGTH 256
 // index 0 stores length
@@ -68,6 +71,7 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
       }
     } else {
       deviceDataOut[idx] = input;
+      atomicAdd(&nonAlphaCounter, 1);  // Increment the counter atomically
     }
   }
 
@@ -85,6 +89,7 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
       }
     } else {
       deviceDataOut[idx] = input;
+      atomicAdd(&nonAlphaCounter, 1);  // Increment the counter atomically
     }
   }
 }
@@ -273,6 +278,11 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
   // check whether the kernel invocation was successful
   checkCudaCall(cudaGetLastError());
 
+ int hostNonAlphaCounter = 0;
+  checkCudaCall(cudaMemcpyFromSymbol(&hostNonAlphaCounter, nonAlphaCounter, sizeof(int)));
+  printf("Number of non-alphabetical characters processed: %d\n", hostNonAlphaCounter);
+
+
   // copy result back
   memoryTime.start();
   checkCudaCall(cudaMemcpy(data_out, deviceDataOut, n * sizeof(char),
@@ -336,6 +346,11 @@ int DecryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   // check whether the kernel invocation was successful
   checkCudaCall(cudaGetLastError());
+
+  // TODO, debug statements
+  int hostNonAlphaCounter = 0;
+  checkCudaCall(cudaMemcpyFromSymbol(&hostNonAlphaCounter, nonAlphaCounter, sizeof(int)));
+  printf("Number of non-alphabetical characters processed: %d\n", hostNonAlphaCounter);
 
   // copy result back
   memoryTime.start();
