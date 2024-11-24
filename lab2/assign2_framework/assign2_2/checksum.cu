@@ -116,11 +116,9 @@ unsigned int checksumSeq (int n, unsigned int* data_in) {
     memoryTime.stop();
 
     kernelTime.start();
-    int gridSize;
-    if (n < gridSize) {
+    int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
+    if (gridSize == 0) {
       gridSize = 1;
-    } else {
-      gridSize = (n + threadBlockSize - 1) / threadBlockSize;
     }
     checksumKernel<<<gridSize, threadBlockSize>>>(deviceResult, deviceDataIn, n);
     cudaDeviceSynchronize();
