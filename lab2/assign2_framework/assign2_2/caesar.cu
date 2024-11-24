@@ -44,28 +44,12 @@ static void checkCudaCall(cudaError_t result) {
 
 /* Change this kernel to properly encrypt the given data. The result should be
  * written to the given out data. */
-__global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
-  char input = deviceDataIn[idx];
-  int key_length = deviceKey[0];
-
-  int shift;
-  if (key_length == 1) {
-      shift = deviceKey[1];  // Single key shift
-  } else {
-      shift = deviceKey[(idx % key_length) + 1];  // Vigenère-like shift
-  }
-
-  if ((input >= 'A' && input <= 'Z') || (input >= 'a' && input <= 'z')) {
-      if (input >= 'a' && input <= 'z') {
-          deviceDataOut[idx] = 'a' + (input - 'a' + shift) % 26;
-      } else {
-          deviceDataOut[idx] = 'A' + (input - 'A' + shift) % 26;
-      }
-  } else {
-      deviceDataOut[idx] = input;  // Non-alphabetical characters remain unchanged
-  }
+__global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut, int length){
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    char input = deviceDataIn[idx];
+    deviceDataOut[idx] = input + 1;  // Simplified operation for debugging
 }
+
 
 /* Change this kernel to properly decrypt the given data. The result should be
  * written to the given out data. */
@@ -244,7 +228,7 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   //TODO, added gridsize check
   int gridSize = (n + threadBlockSize - 1) / threadBlockSize;
-  encryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut);
+  encryptKernel<<<gridSize, threadBlockSize>>>(deviceDataIn, deviceDataOut, key_length);
   cudaDeviceSynchronize();
   kernelTime1.stop();
 
