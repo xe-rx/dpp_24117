@@ -1,3 +1,13 @@
+/*
+ * SSID: 15225054 - Boris Vukajlovic
+ * SSID: 14675218 - Marouan Bellari
+ *
+ * Program Description:
+ * This program simulates a wave equation or similar iterative calculation over a 1D array using pthreads for parallel processing.
+ * The simulation runs for a specified number of time steps, with each thread working on a different chunk of the array.
+ * The program uses a pthread barrier to synchronize threads between time steps, and the main thread manages pointer swapping to update arrays efficiently.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -13,6 +23,10 @@ int t_max_global;
 int num_threads_global;
 pthread_barrier_t barrier;
 
+// Worker thread function: Computes the next state of a section of the array for each time step.
+// Each thread updates elements within its assigned chunk, based on neighboring values in the current array.
+// Synchronization barriers ensure threads proceed in unison after each update, and the main thread performs
+// pointer swapping to update array references for the next iteration.
 void *worker(void *arg)
 {
     int thread_id = *(int *)arg;
@@ -54,6 +68,9 @@ void *worker(void *arg)
     pthread_exit(NULL);
 }
 
+// Main simulation function: Sets up and manages threads for parallel simulation of array updates.
+// Initializes the barrier and creates worker threads, each of which processes a chunk of the array.
+// After all threads complete, cleans up allocated resources and returns the final state of the current array.
 double *simulate(const int i_max, const int t_max, const int num_threads,
                  double *old_array, double *current_array, double *next_array)
 {
