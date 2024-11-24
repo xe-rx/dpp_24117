@@ -51,6 +51,12 @@ __global__ void encryptKernel(char *deviceDataIn, char *deviceDataOut) {
   if (key_length == 1) {
     if ((input>='A' && input<='Z') || (input>='a' && input<='z')) {
       int shift = deviceKey[1];
+
+      //TODO DEBUG
+      if (idx < 10) {
+          printf("Thread %d: input='%c', shift=%d, output='%c'\n", idx, input, shift, deviceDataOut[idx]);
+      }
+
       if (input>='a' && input<='z') {
         // Wrapping alphabet characters formula derived from:
         // https://en.wikipedia.org/wiki/Caesar_cipher
@@ -222,6 +228,13 @@ int EncryptCuda(int n, char *data_in, char *data_out, int key_length,
 
   // TODO, DONT KNOW IF THIS IS ALLOWED
   cudaMemcpyToSymbol(deviceKey, key, (key_length + 1) * sizeof(int));
+
+  // Debug: Verify key in device memory
+  int hostKey[MAX_KEY_LENGTH];
+  cudaMemcpyFromSymbol(hostKey, deviceKey, (key_length + 1) * sizeof(int));
+  printf("Key in device memory: ");
+  for (int i = 0; i <= key_length; i++) printf("%d ", hostKey[i]);
+  printf("\n");
 
   // allocate the vectors on the GPU
   char *deviceDataIn = NULL;
