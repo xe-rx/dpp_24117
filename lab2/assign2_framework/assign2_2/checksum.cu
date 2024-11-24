@@ -40,31 +40,32 @@ static void checkCudaCall(cudaError_t result) {
 /* Change this kernel to compute a simple, additive checksum of the given data.
  * The result should be written to the given result-integer, which is an
  * integer and NOT an array like deviceDataIn. */
-__global__ void checksumKernel(unsigned int* result, unsigned int* deviceDataIn, int n) {
-    __shared__ unsigned int partialSum[512];
+__global__ void checksumKernel(unsigned int* result, const unsigned int* deviceDataIn, int n) {
+    extern __shared__ unsigned int sdata[];
 
-    int tid = threadIdx.x + blockIdx.x * blockDim.x;
-    int local_tid = threadIdx.x;
+    unsigned int tid = threadIdx.x;
+    unsigned int idx = blockIdx.x * blockDim.x * 2 + threadIdx.x;
+
     unsigned int sum = 0;
 
-    for (int i = tid; i < n; i += gridDim.x * blockDim.x) {
-        sum += deviceDataIn[i];
-    }
+    if (idx < n) sum += deviceDataIn[idx];
+    if (idx + blockDim.x < n) sum += deviceDataIn[idx + blockDim.x];
 
-    partialSum[local_tid] = sum;
+    sdata[tid] = sum;
     __syncthreads();
 
-    for (int stride = blockDim.x / 2; stride > 0; stride >>= 1) {
-        if (local_tid < stride) {
-            partialSum[local_tid] += partialSum[local_tid + stride];
+    for (unsigned int s = blockDim.x / 2; s > 0; s >>= 1) {
+        if (tid < s) {
+            sdata[tid] += sdata[tid + s];
         }
         __syncthreads();
     }
 
-    if (local_tid == 0) {
-        atomicAdd(result, partialSum[0]);
+    if (tid == 0) {
+        atomicAdd(result, sdata[0]);
     }
 }
+
 
 /* Wrapper for your checksum kernel, i.e., does the necessary preparations and
  * calls your kernel. */
