@@ -6,12 +6,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <mpi.h>
 
 #include "simulate.h"
 
-#define C 0.15  // Wave speed constant
+#define C 0.15
 
 /*
  * Executes the entire simulation.
@@ -26,108 +25,115 @@ double *simulate(const int i_max, const int t_max, double *old_array,
                  double *current_array, double *next_array)
 {
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);  // get process rank
-    MPI_Comm_size(MPI_COMM_WORLD, &size);  // get number of processes
+    MPI_Init(NULL, NULL); // initialize MPI
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int N = i_max - 2;  // number of inner points (excluding boundaries)
-    int base = N / size;
-    int extra = N % size;
-    int local_N = base + (rank < extra ? 1 : 0);  // local number of points
+    int N = i_max - 2; // exclude boundary points
+    int base_chunk = N / size;
+    int remainder = N % size;
 
-    // allocate local arrays with halo cells
-    double *local_old_array = malloc((local_N + 2) * sizeof(double));
-    double *local_current_array = malloc((local_N + 2) * sizeof(double));
-    double *local_next_array = malloc((local_N + 2) * sizeof(double));
+    // calc local domain size for each process
+    int local_N = base_chunk + (rank < remainder ? 1 : 0);
 
-    // set up counts and displacements for scatter and gather
-    int *counts = NULL;
+    // calc start and end indices in the global array
+    int offset = 1; // start from index 1 to exclude boundary
+    for (int i = 0; i < rank; i++) {
+        offset += base_chunk + (i < remainder ? 1 : 0);
+    }
+
+    // allocate local arrays with halo cells (extra two elements)
+    double *old_local = (double *)malloc((local_N + 2) * sizeof(double));
+    double *current_local = (double *)malloc((local_N + 2) * sizeof(double));
+    double *next_local = (double *)malloc((local_N + 2) * sizeof(double));
+
+    // scatter old_array and current_array to all processes
+    int *sendcounts = NULL;
     int *displs = NULL;
     if (rank == 0) {
-        counts = malloc(size * sizeof(int));
-        displs = malloc(size * sizeof(int));
-        int sum = 0;
+        sendcounts = (int *)malloc(size * sizeof(int));
+        displs = (int *)malloc(size * sizeof(int));
+
+        int displacement = 1; // start from index 1
         for (int i = 0; i < size; i++) {
-            counts[i] = base + (i < extra ? 1 : 0);
-            displs[i] = sum + 1;
-            sum += counts[i];
+            int count = base_chunk + (i < remainder ? 1 : 0);
+            sendcounts[i] = count;
+            displs[i] = displacement;
+            displacement += count;
         }
     }
 
-    // scatter old_array and current_array to local arrays
-    MPI_Scatterv(old_array + 1, counts, displs, MPI_DOUBLE,
-                 local_old_array + 1, local_N, MPI_DOUBLE,
-                 0, MPI_COMM_WORLD);
-    MPI_Scatterv(current_array + 1, counts, displs, MPI_DOUBLE,
-                 local_current_array + 1, local_N, MPI_DOUBLE,
-                 0, MPI_COMM_WORLD);
+    // receive counts for local arrays (excluding halo cells)
+    MPI_Scatter(sendcounts, 1, MPI_INT, &local_N, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // initialize halo cells
-    local_old_array[0] = 0.0;
-    local_old_array[local_N + 1] = 0.0;
-    local_current_array[0] = 0.0;
-    local_current_array[local_N + 1] = 0.0;
+    // scatter old_array
+    MPI_Scatterv(old_array, sendcounts, displs, MPI_DOUBLE,
+                 &old_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // scatter current_array
+    MPI_Scatterv(current_array, sendcounts, displs, MPI_DOUBLE,
+                 &current_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // initialize halo cells (boundary conditions)
+    old_local[0] = 0.0;
+    old_local[local_N + 1] = 0.0;
+    current_local[0] = 0.0;
+    current_local[local_N + 1] = 0.0;
+
+    // identify neighboring ranks
+    int left = rank - 1;
+    int right = rank + 1;
+    if (left < 0)
+        left = MPI_PROC_NULL;
+    if (right >= size)
+        right = MPI_PROC_NULL;
 
     for (int t = 0; t < t_max; t++) {
         // exchange halo cells with neighbors
-        if (rank > 0) {
-            MPI_Sendrecv(&local_current_array[1], 1, MPI_DOUBLE, rank - 1, 0,
-                         &local_current_array[0], 1, MPI_DOUBLE, rank - 1, 0,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        } else {
-            local_current_array[0] = 0.0;  // left boundary condition
-        }
+        // send left, receive from right
+        MPI_Sendrecv(&current_local[1], 1, MPI_DOUBLE, left, 0,
+                     &current_local[local_N + 1], 1, MPI_DOUBLE, right, 0,
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        if (rank < size - 1) {
-            MPI_Sendrecv(&local_current_array[local_N], 1, MPI_DOUBLE, rank + 1, 0,
-                         &local_current_array[local_N + 1], 1, MPI_DOUBLE, rank + 1, 0,
-                         MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        } else {
-            local_current_array[local_N + 1] = 0.0;  // right boundary condition
-        }
+        // send right, receive from left
+        MPI_Sendrecv(&current_local[local_N], 1, MPI_DOUBLE, right, 1,
+                     &current_local[0], 1, MPI_DOUBLE, left, 1,
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-        // compute next_array
+        // update the local array
         for (int i = 1; i <= local_N; i++) {
-            local_next_array[i] = 2 * local_current_array[i] - local_old_array[i] +
-                                  C * (local_current_array[i - 1] - 2 * local_current_array[i] + local_current_array[i + 1]);
+            next_local[i] = 2 * current_local[i] - old_local[i] +
+                            C * (current_local[i - 1] -
+                                 (2 * current_local[i] - current_local[i + 1]));
         }
 
-        // swap arrays
-        double *temp = local_old_array;
-        local_old_array = local_current_array;
-        local_current_array = local_next_array;
-        local_next_array = temp;
+        // swap pointers for next iteration
+        double *temp = old_local;
+        old_local = current_local;
+        current_local = next_local;
+        next_local = temp;
     }
 
-    // gather results back to process 0
-    double *final_array = NULL;
-    if (rank == 0) {
-        final_array = malloc(i_max * sizeof(double));
-        final_array[0] = 0.0;             // left boundary
-        final_array[i_max - 1] = 0.0;     // right boundary
-    }
-
-    MPI_Gatherv(local_current_array + 1, local_N, MPI_DOUBLE,
-                final_array + 1, counts, displs, MPI_DOUBLE,
+    // gather the results back to the root process
+    MPI_Gatherv(&current_local[1], local_N, MPI_DOUBLE,
+                current_array, sendcounts, displs, MPI_DOUBLE,
                 0, MPI_COMM_WORLD);
 
-    // copy results to current_array in process 0
+    // free
+    free(old_local);
+    free(current_local);
+    free(next_local);
     if (rank == 0) {
-        memcpy(current_array, final_array, i_max * sizeof(double));
-        free(final_array);
-    }
-
-    free(local_old_array);
-    free(local_current_array);
-    free(local_next_array);
-    if (rank == 0) {
-        free(counts);
+        free(sendcounts);
         free(displs);
     }
 
-    // return the final array in process 0
+    MPI_Finalize();
+
     if (rank == 0) {
         return current_array;
     } else {
-        return NULL;
+        exit(0);
     }
+
 }
