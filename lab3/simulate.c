@@ -5,6 +5,8 @@
  * SSID: 14675218 - Marouan Bellari
  *
  * Program Description:
+ * Implementation of a 1D wave equation solver using MPI for parallel computation.
+ * Utilizing a custom broadcast function.
  */
 
 #include <stdio.h>
@@ -16,6 +18,11 @@
 
 #define C 0.15
 
+/*
+ * MYMPI_Bcast:
+ * A custom implementation of the MPI broadcast function using a ring-based topology.
+ * Utilizes a bidirectional flow of data where processes ignore any duplicate data.
+ */
 int MYMPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm communicator) {
     int rank, size;
     MPI_Comm_rank(communicator, &rank);
@@ -97,7 +104,6 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         global_offsets = (int *)malloc(size * sizeof(int));
     }
 
-    // Broadcast global_offsets array
     MYMPI_Bcast(global_offsets, size, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (rank != 0) {
@@ -120,24 +126,18 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         }
     }
 
-    // Scatter local_N to all ranks
     MPI_Scatter(sendcounts, 1, MPI_INT, &local_N, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Allocate local arrays
     double *old_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *current_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *next_local = (double *)malloc((local_N + 2) * sizeof(double));
 
-    // Use MPI_Scatterv to populate local arrays
     MPI_Scatterv(old_array, sendcounts, displs, MPI_DOUBLE,
                  &old_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     MPI_Scatterv(current_array, sendcounts, displs, MPI_DOUBLE,
                  &current_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // No memcpy with offset needed, scatter already placed the correct data
-
-    // Initialize halo cells
     old_local[0] = 0.0;
     old_local[local_N + 1] = 0.0;
     current_local[0] = 0.0;
