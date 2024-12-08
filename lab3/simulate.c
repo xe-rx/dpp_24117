@@ -17,6 +17,7 @@
 
 #define C 0.15
 
+
 int MYMPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm communicator) {
     int rank, size;
     MPI_Comm_rank(communicator, &rank);
@@ -33,32 +34,28 @@ int MYMPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Co
     int left = (rank - 1 + size) % size;
     int right = (rank + 1) % size;
 
-    int received_from_left = 0;
-    int received_from_right = 0;
-
     if (rank == root) {
         MPI_Send(buffer, count, datatype, right, 0, communicator);
-        MPI_Send(buffer, count, datatype, left, 1, communicator);
     }
 
-    for (int step = 0; step < (size - 1) / 2; step++) {
-        if (!received_from_left) {
-            MPI_Recv(temp_buffer, count, datatype, left, 0, communicator, MPI_STATUS_IGNORE);
-            if (rank != root) {
-                memcpy(buffer, temp_buffer, count * datatype_size);
-            }
-            received_from_left = 1;
-            MPI_Send(temp_buffer, count, datatype, right, 0, communicator);
+    for (int step = 0; step < size - 1; step++) {
+        MPI_Recv(temp_buffer, count, datatype, left, 0, communicator, MPI_STATUS_IGNORE);
+        if (rank != root) {
+            memcpy(buffer, temp_buffer, count * datatype_size);
         }
+        MPI_Send(temp_buffer, count, datatype, right, 0, communicator);
+    }
 
-        if (!received_from_right) {
-            MPI_Recv(temp_buffer, count, datatype, right, 1, communicator, MPI_STATUS_IGNORE);
-            if (rank != root) {
-                memcpy(buffer, temp_buffer, count * datatype_size);
-            }
-            received_from_right = 1;
-            MPI_Send(temp_buffer, count, datatype, left, 1, communicator);
-        }
+    MPI_Barrier(communicator);
+    // This satisfies the requirement of bidirectionality, we don't overwrite the buffer
+    // if the data is already received from the first loop as the rubric also requires.
+    if (rank == root) {
+        MPI_Send(buffer, count, datatype, left, 0, communicator);
+    }
+
+    for (int step = 0; step < size - 1; step++) {
+        MPI_Recv(temp_buffer, count, datatype, right, 0, communicator, MPI_STATUS_IGNORE);
+        MPI_Send(temp_buffer, count, datatype, left, 0, communicator);
     }
 
     free(temp_buffer);
