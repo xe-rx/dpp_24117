@@ -99,6 +99,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     if (rank != 0) {
         global_offsets = (int *)malloc(size * sizeof(int));
     }
+
+    // Only broadcast for global_offsets as requested
     MYMPI_Bcast(global_offsets, size, MPI_INT, 0, MPI_COMM_WORLD);
 
     int offset = global_offsets[rank];
@@ -107,13 +109,38 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         old_array = (double *)malloc(i_max * sizeof(double));
         current_array = (double *)malloc(i_max * sizeof(double));
     }
-    MYMPI_Bcast(old_array, i_max, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-    MYMPI_Bcast(current_array, i_max, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
+    // Revert to using scatter as in the old code for arrays
+    int *sendcounts = NULL;
+    int *displs = NULL;
+    if (rank == 0) {
+        sendcounts = (int *)malloc(size * sizeof(int));
+        displs = (int *)malloc(size * sizeof(int));
+
+        int displacement = 1;
+        for (int i = 0; i < size; i++) {
+            int count = base_chunk + (i < remainder ? 1 : 0);
+            sendcounts[i] = count;
+            displs[i] = displacement;
+            displacement += count;
+        }
+    }
+
+    // Receive local_N again from the root for consistency
+    MPI_Scatter(sendcounts, 1, MPI_INT, &local_N, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Scatter the arrays as before
     double *old_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *current_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *next_local = (double *)malloc((local_N + 2) * sizeof(double));
 
+    MPI_Scatterv(old_array, sendcounts, displs, MPI_DOUBLE,
+                 &old_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Scatterv(current_array, sendcounts, displs, MPI_DOUBLE,
+                 &current_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    // No other changes: keep the memcpy lines and other code as is
     memcpy(&old_local[1], &old_array[offset], local_N * sizeof(double));
     memcpy(&current_local[1], &current_array[offset], local_N * sizeof(double));
 
@@ -146,26 +173,22 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         next_local = temp;
     }
 
-    // Gather results back to root
-    // NOTE: If local_N differs per process, consider using MPI_Gatherv.
-    // For simplicity, let's assume a scenario where you handle that.
     int *counts = NULL;
-    int *displs = NULL;
+    int *displs_gather = NULL;
     if (rank == 0) {
         counts = (int *)malloc(size * sizeof(int));
-        displs = (int *)malloc(size * sizeof(int));
+        displs_gather = (int *)malloc(size * sizeof(int));
         for (int i = 0; i < size; i++) {
             counts[i] = base_chunk + (i < remainder ? 1 : 0);
         }
-        displs[0] = 1;
+        displs_gather[0] = 1;
         for (int i = 1; i < size; i++) {
-            displs[i] = displs[i-1] + counts[i-1];
+            displs_gather[i] = displs_gather[i-1] + counts[i-1];
         }
     }
 
-    MPI_Gatherv(&current_local[1], local_N, MPI_DOUBLE, current_array, counts, displs, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    MPI_Gatherv(&current_local[1], local_N, MPI_DOUBLE, current_array, counts, displs_gather, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // Free memory
     free(old_local);
     free(current_local);
     free(next_local);
@@ -175,8 +198,10 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         free(current_array);
     }
     if (rank == 0) {
-        free(counts);
+        free(sendcounts);
         free(displs);
+        free(counts);
+        free(displs_gather);
     }
 
     MPI_Finalize();
