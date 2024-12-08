@@ -100,7 +100,6 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         global_offsets = (int *)malloc(size * sizeof(int));
     }
 
-    // Only broadcast for global_offsets as requested
     MYMPI_Bcast(global_offsets, size, MPI_INT, 0, MPI_COMM_WORLD);
 
     int offset = global_offsets[rank];
@@ -110,7 +109,6 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         current_array = (double *)malloc(i_max * sizeof(double));
     }
 
-    // Revert to using scatter as in the old code for arrays
     int *sendcounts = NULL;
     int *displs = NULL;
     if (rank == 0) {
@@ -126,10 +124,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         }
     }
 
-    // Receive local_N again from the root for consistency
     MPI_Scatter(sendcounts, 1, MPI_INT, &local_N, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Scatter the arrays as before
     double *old_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *current_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *next_local = (double *)malloc((local_N + 2) * sizeof(double));
@@ -140,7 +136,6 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     MPI_Scatterv(current_array, sendcounts, displs, MPI_DOUBLE,
                  &current_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // No other changes: keep the memcpy lines and other code as is
     memcpy(&old_local[1], &old_array[offset], local_N * sizeof(double));
     memcpy(&current_local[1], &current_array[offset], local_N * sizeof(double));
 
