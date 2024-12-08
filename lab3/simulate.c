@@ -45,8 +45,9 @@ int MYMPI_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Co
     }
 
     MPI_Barrier(communicator);
-        // This satisfies the requirement of bidirectionality, we don't overwrite the buffer 
-        // if the data is already received from the first loop as the rubric also requires.    if (rank == root) {
+    // This satisfies the requirement of bidirectionality, we don't overwrite the buffer 
+    // if the data is already received from the first loop as the rubric also requires. 
+    if (rank == root) {
         MPI_Send(buffer, count, datatype, left, 0, communicator);
     }
 
@@ -85,10 +86,10 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     int *global_offsets = NULL;
     if (rank == 0) {
         global_offsets = (int *)malloc(size * sizeof(int));
-        int offset = 1;
+        int calc_offset = 1;
         for (int i = 0; i < size; i++) {
-            global_offsets[i] = offset;
-            offset += base_chunk + (i < remainder ? 1 : 0);
+            global_offsets[i] = calc_offset;
+            calc_offset += base_chunk + (i < remainder ? 1 : 0);
         }
     }
 
@@ -96,11 +97,8 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         global_offsets = (int *)malloc(size * sizeof(int));
     }
 
-    // Broadcast the global_offsets array (still using broadcast somewhere)
+    // Broadcast global_offsets array
     MYMPI_Bcast(global_offsets, size, MPI_INT, 0, MPI_COMM_WORLD);
-
-    // Note: We no longer rely on 'offset' for memcpy, since MPI_Scatterv handles data distribution
-    int offset = global_offsets[rank];
 
     if (rank != 0) {
         old_array = (double *)malloc(i_max * sizeof(double));
@@ -122,7 +120,7 @@ double *simulate(const int i_max, const int t_max, double *old_array,
         }
     }
 
-    // Scatter the local_N to all ranks
+    // Scatter local_N to all ranks
     MPI_Scatter(sendcounts, 1, MPI_INT, &local_N, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
     // Allocate local arrays
@@ -130,15 +128,14 @@ double *simulate(const int i_max, const int t_max, double *old_array,
     double *current_local = (double *)malloc((local_N + 2) * sizeof(double));
     double *next_local = (double *)malloc((local_N + 2) * sizeof(double));
 
-    // Use MPI_Scatterv to directly populate the local arrays correctly
+    // Use MPI_Scatterv to populate local arrays
     MPI_Scatterv(old_array, sendcounts, displs, MPI_DOUBLE,
                  &old_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     MPI_Scatterv(current_array, sendcounts, displs, MPI_DOUBLE,
                  &current_local[1], local_N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    // Remove the memcpy operations that rely on offset indexing
-    // Because MPI_Scatterv already placed the correct segment into old_local and current_local
+    // No memcpy with offset needed, scatter already placed the correct data
 
     // Initialize halo cells
     old_local[0] = 0.0;
